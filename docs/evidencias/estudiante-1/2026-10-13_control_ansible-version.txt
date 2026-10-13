@@ -1,0 +1,63 @@
+==========================================================
+  EVIDENCIA ACTIVIDAD 6: CONFIGURACIÓN DE ANSIBLE EN CONTROL
+  Fecha de Ejecución: Tue Oct 13 23:32:18 UTC 2026
+  Responsable: Estudiante 1
+==========================================================
+
+--- 1. VERSIÓN DE ANSIBLE Y ENTORNO ---
+ansible [core 2.20.1]
+  config file = /home/automatizacion/ansible-uaa/ansible.cfg
+  configured module search path = ['/home/automatizacion/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
+  ansible python module location = /usr/lib/python3/dist-packages/ansible
+  ansible collection location = /home/automatizacion/.ansible/collections:/usr/share/ansible/collections
+  executable location = /usr/bin/ansible
+  python version = 3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0] (/usr/bin/python3)
+  jinja version = 3.1.6
+  pyyaml version = 6.0.3 (with libyaml v0.2.5)
+
+--- 2. VERSIÓN DE GIT ---
+git version 2.53.0
+
+--- 3. ARCHIVO ANSIBLE.CFG ACTIVO ---
+[defaults]
+# Ruta al inventario predeterminado del laboratorio
+inventory = inventories/laboratorio/hosts.yml
+# Seguridad SSH: Mantener estricta la verificación de host keys (previene MITM)
+host_key_checking = True
+# Usuario remoto por defecto para todas las conexiones
+remote_user = automatizacion
+# Ruta a la llave privada Ed25519 generada en el Paso 3
+private_key_file = ~/.ssh/ansible_uaa
+# Detección silenciosa del intérprete Python en los nodos remotos
+interpreter_python = auto_silent
+# Deshabilitar la generación de archivos .retry ante fallos
+retry_files_enabled = False
+# Formato legible de salida de playbooks
+stdout_callback = yaml
+[privilege_escalation]
+# Habilitar elevación de privilegios
+become = True
+become_method = sudo
+become_user = root
+# Solicitar la contraseña de sudo de forma interactiva (SEGURIDAD: No guardar contraseña en texto plano)
+become_ask_pass = True
+[ssh_connection]
+# Optimización de tuberías SSH para acelerar la ejecución
+pipelining = True
+
+--- 4. PARÁMETROS ACTIVOS (ONLY CHANGED) ---
+CONFIG_FILE() = /home/automatizacion/ansible-uaa/ansible.cfg
+DEFAULT_BECOME(/home/automatizacion/ansible-uaa/ansible.cfg) = True
+DEFAULT_BECOME_ASK_PASS(/home/automatizacion/ansible-uaa/ansible.cfg) = True
+DEFAULT_BECOME_METHOD(/home/automatizacion/ansible-uaa/ansible.cfg) = sudo
+DEFAULT_BECOME_USER(/home/automatizacion/ansible-uaa/ansible.cfg) = root
+DEFAULT_HOST_LIST(/home/automatizacion/ansible-uaa/ansible.cfg) = ['/home/automatizacion/ansible-uaa/inventories/laboratorio/hosts.yml']
+DEFAULT_PRIVATE_KEY_FILE(/home/automatizacion/ansible-uaa/ansible.cfg) = /home/automatizacion/.ssh/ansible_uaa
+DEFAULT_REMOTE_USER(/home/automatizacion/ansible-uaa/ansible.cfg) = automatizacion
+DEFAULT_STDOUT_CALLBACK(/home/automatizacion/ansible-uaa/ansible.cfg) = yaml
+HOST_KEY_CHECKING(/home/automatizacion/ansible-uaa/ansible.cfg) = True
+INTERPRETER_PYTHON(/home/automatizacion/ansible-uaa/ansible.cfg) = auto_silent
+RETRY_FILES_ENABLED(/home/automatizacion/ansible-uaa/ansible.cfg) = False
+
+GALAXY_SERVERS:
+==========================================================
