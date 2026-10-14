@@ -1,0 +1,16 @@
+---
+- name: Preparar laboratorio y verificar SSH
+  hosts: all
+  become: true
+  tasks:
+    - name: Instalar paquete basico de prueba
+      ansible.builtin.apt:
+        name: curl
+        state: present
+        update_cache: yes
+
+    - name: Asegurar que el servicio SSH esta activo y habilitado
+      ansible.builtin.service:
+        name: ssh
+        state: started
+        enabled: yes
