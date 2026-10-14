@@ -1,0 +1,8 @@
+@all:
+  |--@ungrouped:
+  |--@web:
+  |  |--srv-web-01
+  |--@databases:
+  |  |--srv-db-01
+  |--@management:
+  |  |--srv-admin-01
