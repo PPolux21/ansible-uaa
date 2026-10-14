@@ -8,7 +8,6 @@
         name: curl
         state: present
         update_cache: yes
-
     - name: Asegurar que el servicio SSH esta activo y habilitado
       ansible.builtin.service:
         name: ssh

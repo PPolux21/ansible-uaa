@@ -1,0 +1,26 @@
+
+PLAY [Preparar laboratorio y verificar SSH] ************************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [srv-admin-01]
+ok: [srv-web-01]
+[ERROR]: Task failed: Failed to connect to the host via ssh: ssh: connect to host 25.1.68.192 port 22: Connection timed out
+fatal: [srv-db-01]: UNREACHABLE! => 
+    changed: false
+    msg: 'Task failed: Failed to connect to the host via ssh: ssh: connect to host 25.1.68.192
+        port 22: Connection timed out'
+    unreachable: true
+
+TASK [Instalar paquete basico de prueba] ***************************************
+ok: [srv-admin-01]
+ok: [srv-web-01]
+
+TASK [Asegurar que el servicio SSH esta activo y habilitado] *******************
+ok: [srv-admin-01]
+ok: [srv-web-01]
+
+PLAY RECAP *********************************************************************
+srv-admin-01               : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+srv-db-01                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+srv-web-01                 : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
