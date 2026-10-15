@@ -1,0 +1,23 @@
+
+PLAY [Preparar laboratorio y verificar SSH] ************************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [srv-admin-01]
+ok: [srv-web-01]
+ok: [srv-db-01]
+
+TASK [Instalar paquete basico de prueba] ***************************************
+ok: [srv-admin-01]
+ok: [srv-web-01]
+ok: [srv-db-01]
+
+TASK [Asegurar que el servicio SSH esta activo y habilitado] *******************
+ok: [srv-admin-01]
+ok: [srv-web-01]
+ok: [srv-db-01]
+
+PLAY RECAP *********************************************************************
+srv-admin-01               : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+srv-db-01                  : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+srv-web-01                 : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+

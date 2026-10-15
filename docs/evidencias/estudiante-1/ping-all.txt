@@ -1,0 +1,9 @@
+srv-admin-01 | SUCCESS => 
+    changed: false
+    ping: pong
+srv-web-01 | SUCCESS => 
+    changed: false
+    ping: pong
+srv-db-01 | SUCCESS => 
+    changed: false
+    ping: pong

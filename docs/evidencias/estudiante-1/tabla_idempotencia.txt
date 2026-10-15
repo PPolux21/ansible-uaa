@@ -1,0 +1,14 @@
+========================================================================
+TABLA COMPARATIVA DE IDEMPOTENCIA - ACTIVIDAD 8 (Estudiante 1 y 2)
+Playbook: playbooks/preparar_laboratorio.yml
+Fecha: $(date)
+========================================================================
+HOST            EJECUCIÓN 1 (run-01)              EJECUCIÓN 2 (run-02)
+                ok  changed  unreachable  failed   ok  changed  unreachable  failed
+------------------------------------------------------------------------
+srv-web-01      3   1        0            0        3   0        0            0
+srv-db-01       3   1        0            0        3   0        0            0
+srv-admin-01    3   1        0            0        3   0        0            0
+========================================================================
+CRITERIO DE IDEMPOTENCIA: CUMPLIDO (Segunda corrida con changed=0 y failed=0)
+========================================================================
