@@ -1,0 +1,17 @@
+731 packages installed:
+    726 packages from Ubuntu Main/Restricted repository
+    4 packages from Ubuntu Universe/Multiverse repository
+    1 package no longer available for download
+
+To get more information about the packages, run
+    pro security-status --help
+for a list of available options.
+
+This machine is attached to an Ubuntu Pro subscription.
+
+Main/Restricted packages are receiving security updates from
+Ubuntu Pro with 'esm-infra' enabled until 2036.
+
+Universe/Multiverse packages are receiving security updates from
+Ubuntu Pro with 'esm-apps' enabled until 2036.
+

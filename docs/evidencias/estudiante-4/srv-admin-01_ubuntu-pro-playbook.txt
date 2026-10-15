@@ -1,0 +1,35 @@
+
+PLAY [Gestionar Ubuntu Pro en el servidor administrativo] **********************
+
+TASK [Gathering Facts] *********************************************************
+ok: [srv-admin-01]
+
+TASK [Consultar estado de Ubuntu Pro] ******************************************
+ok: [srv-admin-01]
+
+TASK [Mostrar estado de Ubuntu Pro] ********************************************
+ok: [srv-admin-01] => 
+    pro_status.stdout_lines:
+    - SERVICE          ENTITLED  STATUS       DESCRIPTION
+    - anbox-cloud      yes                disabled              Scalable Android in the
+        cloud
+    - esm-apps         yes                enabled               Expanded Security Maintenance
+        for Applications
+    - esm-infra        yes                enabled               Expanded Security Maintenance
+        for Infrastructure
+    - landscape        yes                disabled              Management and administration
+        tool for Ubuntu
+    - livepatch        yes                disabled              Canonical Livepatch service
+    - ''
+    - For a list of all Ubuntu Pro services, run 'pro status --all'
+    - 'Enable services with: pro enable <service>'
+    - ''
+    - '     Account: al280676@edu.uaa.mx'
+    - 'Subscription: Ubuntu Pro - free personal subscription'
+
+TASK [Adjuntar Ubuntu Pro solo cuando este autorizado] *************************
+skipping: [srv-admin-01]
+
+PLAY RECAP *********************************************************************
+srv-admin-01               : ok=3    changed=0    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+
