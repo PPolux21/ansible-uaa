@@ -1,0 +1,6 @@
+---
+- name: Aplicar rol base a todos los nodos administrados
+  hosts: all
+  become: true
+  roles:
+    - base

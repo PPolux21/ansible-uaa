@@ -1,0 +1,13 @@
+---
+- name: Instalar paquetes comunes del rol base
+  ansible.builtin.apt:
+    name: "{{ base_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Garantizar que el servicio SSH este activo y habilitado
+  ansible.builtin.service:
+    name: ssh
+    state: started
+    enabled: true
