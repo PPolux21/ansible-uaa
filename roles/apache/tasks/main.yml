@@ -1,0 +1,33 @@
+---
+- name: Instalar Apache2
+  ansible.builtin.apt:
+    name: apache2
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Asegurar que el servicio apache2 este activo y habilitado
+  ansible.builtin.service:
+    name: apache2
+    state: started
+    enabled: true
+
+- name: Desplegar pagina de prueba con hostname y ambiente
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: /var/www/html/index.html
+    owner: www-data
+    group: www-data
+    mode: '0644'
+  notify: Recargar Apache
+
+- name: Ejecutar handlers pendientes antes de validar HTTP
+  ansible.builtin.meta: flush_handlers
+
+- name: Validar respuesta HTTP 200 localmente
+  ansible.builtin.uri:
+    url: http://localhost/
+    return_content: true
+    status_code: 200
+  register: http_check
+  failed_when: ansible_facts['hostname'] not in http_check.content

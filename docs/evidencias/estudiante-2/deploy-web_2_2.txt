@@ -1,0 +1,29 @@
+
+PLAY [Desplegar perfil de servidor web] ****************************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [srv-web-01]
+
+TASK [base : Instalar paquetes comunes del rol base] ***************************
+ok: [srv-web-01]
+
+TASK [base : Garantizar que el servicio SSH este activo y habilitado] **********
+ok: [srv-web-01]
+
+TASK [apache : Instalar Apache2] ***********************************************
+ok: [srv-web-01]
+
+TASK [apache : Asegurar que el servicio apache2 este activo y habilitado] ******
+ok: [srv-web-01]
+
+TASK [apache : Desplegar pagina de prueba con hostname y ambiente] *************
+ok: [srv-web-01]
+
+TASK [apache : Ejecutar handlers pendientes antes de validar HTTP] *************
+
+TASK [apache : Validar respuesta HTTP 200 localmente] **************************
+ok: [srv-web-01]
+
+PLAY RECAP *********************************************************************
+srv-web-01                 : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+

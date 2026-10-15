@@ -1,0 +1,7 @@
+---
+- name: Desplegar perfil de servidor web
+  hosts: web
+  become: true
+  roles:
+    - base
+    - apache

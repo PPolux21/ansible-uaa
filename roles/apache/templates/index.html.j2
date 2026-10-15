@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Servidor Web - {{ ansible_facts['hostname'] }}</title>
+</head>
+<body>
+    <h1>Servidor Web Activo</h1>
+    <p><strong>Hostname:</strong> {{ ansible_facts['hostname'] }}</p>
+    <p><strong>Ambiente:</strong> {{ ambiente_servidor }}</p>
+</body>
+</html>

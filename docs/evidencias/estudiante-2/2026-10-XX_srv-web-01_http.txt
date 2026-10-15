@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Servidor Web - srv-web-01</title>
+</head>
+<body>
+    <h1>Servidor Web Activo</h1>
+    <p><strong>Hostname:</strong> srv-web-01</p>
+    <p><strong>Ambiente:</strong> Laboratorio UAA</p>
+</body>
+</html>
