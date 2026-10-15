@@ -1,0 +1,26 @@
+---
+- name: Gestionar Ubuntu Pro en el servidor administrativo
+  hosts: management
+  become: true
+
+  vars:
+    ubuntu_pro_attach_enabled: false
+
+  tasks:
+    - name: Consultar estado de Ubuntu Pro
+      ansible.builtin.command:
+        cmd: pro status
+      register: pro_status
+      changed_when: false
+
+    - name: Mostrar estado de Ubuntu Pro
+      ansible.builtin.debug:
+        var: pro_status.stdout_lines
+
+    - name: Adjuntar Ubuntu Pro solo cuando este autorizado
+      ansible.builtin.command:
+        cmd: pro attach "{{ ubuntu_pro_token }}"
+      when:
+        - ubuntu_pro_attach_enabled | bool
+        - ubuntu_pro_token is defined
+      no_log: true
