@@ -35,3 +35,14 @@
     state: absent
     login_user: root
     login_unix_socket: "{{ mariadb_socket }}"
+
+- name: Verificar consulta local a MariaDB
+  ansible.builtin.command: mariadb -N -B -e "SELECT VERSION();"
+  register: mariadb_version
+  changed_when: false
+  tags: [validacion]
+
+- name: Mostrar resultado de la consulta local
+  ansible.builtin.debug:
+    msg: "MariaDB responde en {{ inventory_hostname }}: {{ mariadb_version.stdout }}"
+  tags: [validacion]
