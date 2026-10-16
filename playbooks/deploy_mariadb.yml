@@ -1,0 +1,7 @@
+---
+- name: Desplegar servidor de base de datos MariaDB
+  hosts: databases
+  become: true
+  roles:
+    - base
+    - mariadb

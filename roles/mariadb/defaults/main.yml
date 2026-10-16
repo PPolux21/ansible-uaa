@@ -1,0 +1,17 @@
+---
+# Paquetes que instala el rol
+mariadb_packages:
+  - mariadb-server
+  - python3-pymysql
+
+# Nombre del servicio en Ubuntu
+mariadb_service: mariadb
+
+# Dirección en la que escucha MariaDB (solo conexiones locales)
+mariadb_bind_address: 127.0.0.1
+
+# Archivo de configuración que administra Ansible
+mariadb_config_file: /etc/mysql/mariadb.conf.d/60-uaa.cnf
+
+# Socket local para que los módulos community.mysql entren como root
+mariadb_socket: /run/mysqld/mysqld.sock
