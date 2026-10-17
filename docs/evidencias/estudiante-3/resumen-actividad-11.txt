@@ -1,0 +1,18 @@
+========================================================================
+EVIDENCIA DE ACTIVIDAD 11: PERFIL SERVIDOR MARIADB (srv-db-01)
+Responsable de Desarrollo: Estudiante 3
+Integración Técnica: Estudiante 1 (control-ansible)
+Fecha: $(date)
+========================================================================
+1. RECAP EJECUCIÓN 1 (run-01-mariadb.txt):
+$(tail -n 2 docs/evidencias/estudiante-3/run-01-mariadb.txt)
+2. RECAP EJECUCIÓN 2 (run-02-mariadb.txt):
+$(tail -n 2 docs/evidencias/estudiante-3/run-02-mariadb.txt)
+3. CONSULTA LOCAL SANITIZADA:
+$(cat docs/evidencias/estudiante-3/consulta-local-mariadb.txt)
+4. AUDITORÍA DE SEGURIDAD (BIND LOCAL 127.0.0.1):
+$(cat docs/evidencias/estudiante-3/socket-escucha-mariadb.txt)
+========================================================================
+CRITERIO DE IDEMPOTENCIA: CUMPLIDO (changed=0 en segunda ejecución)
+SEGURIDAD: CUMPLIDA (Puerto 3306 cerrado hacia Hamachi)
+========================================================================

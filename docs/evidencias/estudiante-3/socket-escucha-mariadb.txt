@@ -1,0 +1,1 @@
+tcp   LISTEN 0      80            127.0.0.1:3306       0.0.0.0:*    users:(("mariadbd",pid=3291,fd=28))                   

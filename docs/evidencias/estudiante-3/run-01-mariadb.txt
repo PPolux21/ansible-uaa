@@ -1,0 +1,40 @@
+
+PLAY [Desplegar servidor de base de datos MariaDB] *****************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [srv-db-01]
+
+TASK [base : Instalar paquetes comunes del rol base] ***************************
+ok: [srv-db-01]
+
+TASK [base : Garantizar que el servicio SSH este activo y habilitado] **********
+ok: [srv-db-01]
+
+TASK [mariadb : Instalar paquetes de MariaDB] **********************************
+changed: [srv-db-01]
+
+TASK [mariadb : Configurar MariaDB para escuchar solo en localhost] ************
+changed: [srv-db-01]
+
+TASK [mariadb : Asegurar que MariaDB esté activo y habilitado] *****************
+ok: [srv-db-01]
+
+TASK [mariadb : Eliminar usuarios anónimos de MariaDB] *************************
+ok: [srv-db-01]
+
+TASK [mariadb : Eliminar la base de datos de prueba] ***************************
+ok: [srv-db-01]
+
+TASK [mariadb : Verificar consulta local a MariaDB] ****************************
+ok: [srv-db-01]
+
+TASK [mariadb : Mostrar resultado de la consulta local] ************************
+ok: [srv-db-01] => 
+    msg: 'MariaDB responde en srv-db-01: 11.8.6-MariaDB-5ubuntu0.1 from Ubuntu'
+
+RUNNING HANDLER [mariadb : Reiniciar MariaDB] **********************************
+changed: [srv-db-01]
+
+PLAY RECAP *********************************************************************
+srv-db-01                  : ok=11   changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+

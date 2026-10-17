@@ -1,0 +1,16 @@
+● mariadb.service - MariaDB 11.8.6 database server
+     Loaded: loaded (/usr/lib/systemd/system/mariadb.service; enabled; preset: enabled)
+     Active: active (running) since Fri 2026-10-16 23:28:07 CST; 7min ago
+ Invocation: c0da08cbc7e646788da536bdb535d7b6
+       Docs: man:mariadbd(8)
+             https://mariadb.com/kb/en/library/systemd/
+    Process: 3235 ExecStartPre=/bin/sh -c [ ! -e /usr/bin/galera_recovery ] && VAR= ||   VAR=`/usr/bin/galera_recovery`; [ $? -eq 0 ]   && echo _WSREP_START_POSITION=$VAR > /run/mysqld/wsrep-start-position || exit 1 (code=exited, status=0/SUCCESS)
+    Process: 3303 ExecStartPost=/bin/rm -f /run/mysqld/wsrep-start-position /run/mysqld/wsrep-new-cluster (code=exited, status=0/SUCCESS)
+    Process: 3305 ExecStartPost=/etc/mysql/debian-start (code=exited, status=0/SUCCESS)
+   Main PID: 3291 (mariadbd)
+     Status: "Taking your SQL requests now..."
+      Tasks: 10 (limit: 12427)
+     Memory: 93.2M (peak: 97.5M)
+        CPU: 3.746s
+     CGroup: /system.slice/mariadb.service
+             └─3291 /usr/sbin/mariadbd
