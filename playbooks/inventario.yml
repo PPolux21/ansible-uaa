@@ -5,7 +5,6 @@
   gather_facts: true
 
   tasks:
-    # Solo lectura: si pro no existe o falla, se reporta como "no disponible"
     - name: Consultar estado de Ubuntu Pro
       ansible.builtin.command: pro status --format json
       register: inv_pro
@@ -24,10 +23,8 @@
           disco_libre_gb: "{{ (inv_raiz['size_available'] / 1024**3) | round(1) }}"
           ubuntu_pro: "{{ 'no disponible' if inv_pro.rc != 0 else ('adjunto' if (inv_pro.stdout | from_json)['attached'] else 'no adjunto') }}"
       vars:
-        # Solo el montaje raíz; se descartan los squashfs de snaps
         inv_raiz: "{{ ansible_facts['mounts'] | selectattr('mount', 'equalto', '/') | first }}"
 
-    # Fecha del nodo de control (solo día, sin hora, para mantener idempotencia)
     - name: Fijar fecha del reporte
       ansible.builtin.set_fact:
         inv_fecha: "{{ now(fmt='%Y-%m-%d') }}"

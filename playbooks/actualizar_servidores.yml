@@ -1,0 +1,76 @@
+---
+- name: Actualización de paquetes de los servidores
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Generar identificador de ejecución
+      ansible.builtin.set_fact:
+        act_id_ejecucion: "{{ now(fmt='%Y-%m-%d_%H%M%S') }}"
+      run_once: true
+
+    - name: Actualizar caché de apt
+      ansible.builtin.apt:
+        update_cache: true
+      changed_when: false
+
+    - name: Simular actualización para contar paquetes pendientes
+      ansible.builtin.command: apt-get -s upgrade --with-new-pkgs
+      register: act_simulacion
+      changed_when: false
+
+    - name: Guardar paquetes pendientes
+      ansible.builtin.set_fact:
+        act_pendientes_lista: "{{ act_simulacion.stdout_lines | select('match', '^Inst ') | map('regex_replace', '^Inst (\\S+).*$', '\\1') | list }}"
+
+    - name: Guardar número de paquetes pendientes
+      ansible.builtin.set_fact:
+        act_pendientes: "{{ act_pendientes_lista | length }}"
+
+    - name: Registrar inicio de la actualización
+      ansible.builtin.set_fact:
+        act_inicio: "{{ now(fmt='%Y-%m-%d %H:%M:%S') }}"
+
+    - name: Aplicar actualización de paquetes
+      ansible.builtin.apt:
+        upgrade: safe
+        force_apt_get: true
+      register: act_upgrade
+
+    - name: Comprobar si el sistema pide reinicio
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: act_reinicio_archivo
+
+    - name: Comprobar si existe la lista de paquetes que piden reinicio
+      ansible.builtin.stat:
+        path: /var/run/reboot-required.pkgs
+      register: act_reinicio_pkgs_archivo
+
+    - name: Leer paquetes que piden reinicio
+      ansible.builtin.slurp:
+        src: /var/run/reboot-required.pkgs
+      register: act_reinicio_pkgs_contenido
+      when: act_reinicio_pkgs_archivo.stat.exists
+
+    - name: Guardar estado de reinicio
+      ansible.builtin.set_fact:
+        act_reinicio: "{{ act_reinicio_archivo.stat.exists }}"
+        act_reinicio_pkgs: "{{ (act_reinicio_pkgs_contenido.content | b64decode).splitlines() | unique | list if act_reinicio_pkgs_archivo.stat.exists else [] }}"
+
+    - name: Registrar fin y estado de la actualización
+      ansible.builtin.set_fact:
+        act_fin: "{{ now(fmt='%Y-%m-%d %H:%M:%S') }}"
+        act_estado: OK
+
+    - name: Mostrar resumen del servidor
+      ansible.builtin.debug:
+        msg:
+          - "Ejecución: {{ act_id_ejecucion }}"
+          - "Inicio: {{ act_inicio }}"
+          - "Fin: {{ act_fin }}"
+          - "Paquetes pendientes antes: {{ act_pendientes }}"
+          - "Paquetes: {{ act_pendientes_lista | join(', ') if act_pendientes_lista else 'ninguno' }}"
+          - "Reinicio requerido: {{ 'sí' if act_reinicio else 'no' }}{{ ' (' ~ act_reinicio_pkgs | join(', ') ~ ')' if act_reinicio_pkgs else '' }}"
+          - "Estado: {{ act_estado }}"

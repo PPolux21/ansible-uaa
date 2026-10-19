@@ -2,7 +2,6 @@
 
 Fecha de generación: {{ inv_fecha }}
 
-{# Un host sin inv_ficha no llegó a armar su ficha (inalcanzable o falló antes) #}
 {% set inv_cuenta = namespace(alcanzables=0) %}
 {% for host in ansible_play_hosts_all %}
 {% if hostvars[host]['inv_ficha'] is defined %}
