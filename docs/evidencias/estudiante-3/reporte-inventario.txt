@@ -1,0 +1,11 @@
+# Inventario técnico de servidores
+
+Fecha de generación: 2026-10-19
+
+- Servidores en el inventario: 1
+- Alcanzables: 1
+- No alcanzables: 0
+
+| Host | Hostname | Ubuntu | IP Hamachi | vCPU | RAM (MB) | Disco total (GB) | Disco libre (GB) | Ubuntu Pro |
+|---|---|---|---|---|---|---|---|---|
+| srv-db-01 | srv-db-01 | Ubuntu 26.04 | 25.1.68.192 | 2 | 1642 | 11.2 | 5.1 | adjunto |

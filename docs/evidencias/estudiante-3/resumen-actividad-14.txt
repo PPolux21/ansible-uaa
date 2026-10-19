@@ -1,0 +1,168 @@
+========================================================================
+EVIDENCIA DE ACTIVIDAD 14: INVENTARIO TÉCNICO Y ACTUALIZACIÓN DE SERVIDORES
+Responsable de Desarrollo: Estudiante 3
+Integración Técnica: Estudiante 1 (control-ansible)
+Fecha: 2026-10-19
+========================================================================
+1. ARCHIVOS
+playbooks/inventario.yml                 Ficha técnica y reporte consolidado
+templates/inventario_reporte.md.j2       Plantilla del reporte de inventario
+playbooks/actualizar_servidores.yml      Conteo, actualización, reinicio y logs
+templates/actualizacion_host.log.j2      Plantilla del log por servidor
+templates/actualizacion_resumen.log.j2   Plantilla del resumen consolidado
+
+Ambos playbooks usan hosts: all, por lo que el mismo código funciona con
+el inventario de laboratorio (tres servidores) y con un inventario de
+pruebas de un solo servidor.
+========================================================================
+2. PLAYBOOK inventario.yml
+Solo lectura, sin become. Por servidor arma la variable inv_ficha con:
+- Hostname:            ansible_facts['hostname']
+- Versión de Ubuntu:   distribution + distribution_version
+- IP Hamachi:          ansible_facts['ham0']['ipv4']['address']
+                       (si la interfaz no existe: "sin ham0")
+- vCPU:                ansible_facts['processor_vcpus']
+- RAM (MB):            ansible_facts['memtotal_mb']
+- Disco total/libre:   montaje / dentro de ansible_facts['mounts']
+- Ubuntu Pro:          pro status --format json, clave attached
+                       (adjunto / no adjunto / no disponible)
+
+Genera un único reporte en el nodo de control con una fila por servidor.
+Recorre ansible_play_hosts_all, de modo que un servidor que no responde
+aparece como "no alcanzable". El encabezado indica cuántos servidores hay
+en el inventario, cuántos fueron alcanzables y cuántos no.
+========================================================================
+3. PLAYBOOK actualizar_servidores.yml
+Usa become: true. Flujo por servidor:
+1) Identificador de ejecución común a todos (AAAA-MM-DD_HHMMSS, hora del
+   nodo de control) y directorio de logs.
+2) Actualización de la caché de apt.
+3) Conteo de paquetes pendientes con apt-get -s upgrade --with-new-pkgs
+   (líneas que empiezan con "Inst ").
+4) Registro de inicio.
+5) Actualización con ansible.builtin.apt (upgrade: safe,
+   force_apt_get: true).
+6) Detección de reinicio: /var/run/reboot-required y, si existe,
+   /var/run/reboot-required.pkgs.
+7) Registro de fin y estado OK.
+8) Log del servidor. Al final, resumen consolidado.
+
+MODO DE ACTUALIZACIÓN
+safe   apt-get upgrade --with-new-pkgs (sin aptitude)   No elimina paquetes
+full   aptitude full-upgrade                            Puede eliminar
+dist   apt-get dist-upgrade                             Puede eliminar
+
+Se eligió safe porque actualiza e instala dependencias nuevas sin
+eliminar paquetes. force_apt_get: true fija el comando aunque algún nodo
+tenga aptitude, de modo que la simulación del paso 3 corresponde a lo que
+se aplica en el paso 5. Las opciones de dpkg por defecto del módulo
+(force-confdef, force-confold) conservan la configuración local y evitan
+preguntas interactivas.
+
+MANEJO DE ERRORES (block / rescue / always)
+- block: pasos 2 a 7.
+- rescue: si una tarea del bloque falla, registra act_estado: FAILED, la
+  hora de fin y act_error (nombre de la tarea + mensaje de error; si el
+  resultado no trae mensaje se usa "sin mensaje de error").
+- always: escribe el log del servidor haya fallado o no.
+
+Un fallo manejado por rescue aparece en el recap como rescued=1 y
+failed=0, porque Ansible considera el error atendido y el servidor sigue
+en el play. El estado real se lee en el resumen consolidado.
+
+Estados del resumen:
+OK            La actualización terminó sin errores.
+FAILED        El servidor respondió, pero una tarea del bloque falló.
+UNREACHABLE   El servidor no tiene act_estado (no respondió por SSH).
+
+La prueba de fallo se hizo con una tarea temporal (ansible.builtin.fail
+activada con la variable simular_fallo) y un servidor inexistente en un
+inventario de pruebas. Una vez validado, la tarea y la variable se
+retiraron del playbook.
+========================================================================
+4. EJECUCIÓN OFICIAL (desde la raíz del repo en control-ansible)
+Inventario:
+  ANSIBLE_BECOME_ASK_PASS=False ansible-playbook playbooks/inventario.yml
+  (no usa become; sin la variable basta con pulsar Enter en
+  BECOME password:)
+
+Actualización:
+  ansible-playbook playbooks/actualizar_servidores.yml
+  (pide la contraseña de sudo de automatizacion; Ansible usa una sola
+  contraseña para todos los servidores, debe ser la misma en los tres)
+========================================================================
+5. RESULTADOS (nodo de control)
+Inventario:     logs/inventario/inventario_<AAAA-MM-DD>.md
+Actualización:  logs/actualizacion/<id_ejecucion>/<servidor>.log
+                logs/actualizacion/<id_ejecucion>/resumen.log
+
+logs/ y *.log están excluidos por .gitignore; para evidencia se copian a
+docs/evidencias/estudiante-3/ como .txt.
+
+Las tareas que escriben en el nodo de control usan delegate_to: localhost
+y become: false. En el recap, Ansible atribuye esos cambios al servidor
+que lanzó la tarea (changed: [srv-db-01 -> localhost]).
+========================================================================
+6. DECISIONES DE DISEÑO
+IDEMPOTENCIA DEL INVENTARIO
+Solo lectura: los servidores nunca reportan cambios. El reporte incluye
+solo la fecha, sin hora, para que dos ejecuciones del mismo día sin
+cambios den changed=0. Si cambia el espacio libre del disco, el reporte
+cambia y se reporta changed=1, lo cual es correcto.
+
+IDEMPOTENCIA DE LA ACTUALIZACIÓN
+Es un playbook de acción: cada ejecución deja constancia en un directorio
+nuevo, por lo que siempre reporta tres cambios en el nodo de control
+(directorio, log y resumen). En los servidores, la segunda ejecución no
+modifica nada: 0 paquetes pendientes y la tarea de actualización en ok.
+La caché de apt usa changed_when: false porque refrescar las listas no
+modifica paquetes ni configuración del sistema.
+
+REINICIO SOLO DETECTADO
+No existe una política de reinicio acordada en el equipo, y un reinicio
+automático interrumpiría servicios como MariaDB o Apache. El log y el
+resumen indican si se requiere reinicio y qué paquetes lo piden, para
+programarlo manualmente.
+
+UBUNTU PRO OPCIONAL
+Se consulta en todos los servidores por ser solo lectura, con
+changed_when: false y failed_when: false: un servidor sin el comando pro
+no detiene el playbook. En la VM de pruebas de srv-db-01 el estado
+resultó "adjunto" (suscripción personal gratuita con esm-apps, esm-infra
+y livepatch), aunque se esperaba solo en srv-admin-01. El playbook
+reporta el estado real.
+
+DISCO DE 11.2 GB
+En srv-db-01 el montaje / mide 11.2 GB aunque el disco virtual es mayor:
+el instalador de Ubuntu Server con LVM no asigna todo el disco al volumen
+raíz. Es esperado. Se filtra el montaje / porque mounts también incluye
+los squashfs de los snaps, que siempre aparecen al 100%.
+
+IP HAMACHI
+Se usa ham0 y no default_ipv4, que corresponde a la interfaz NAT.
+========================================================================
+7. LIMITACIONES CONOCIDAS
+- Un servidor inalcanzable no genera log propio; solo aparece en el
+  resumen como UNREACHABLE.
+- Si un servidor pierde la conexión a mitad del bloque, no pasa por
+  rescue; en el resumen aparece como UNREACHABLE.
+- Si todos los servidores quedan inalcanzables, el resumen no se genera
+  (la tarea usa run_once y requiere al menos un servidor activo).
+- Si el candado de apt está ocupado, el módulo espera hasta 60 segundos
+  antes de fallar.
+========================================================================
+8. EVIDENCIAS (VM de pruebas de srv-db-01)
+run-01-inventario.txt            Salida de inventario.yml (changed=0)
+reporte-inventario.txt           Reporte consolidado de inventario
+run-ok-actualizacion.txt         Ejecución normal (failed=0, rescued=0)
+log-ok-actualizacion.txt         Log de srv-db-01 con Estado: OK
+resumen-ok-actualizacion.txt     Resumen con OK: 1
+run-failed-actualizacion.txt     Prueba de fallo (rescued=1, failed=0,
+                                 un servidor UNREACHABLE)
+log-failed-actualizacion.txt     Log de srv-db-01 con Estado: FAILED
+resumen-failed-actualizacion.txt Resumen con FAILED: 1, UNREACHABLE: 1
+========================================================================
+CRITERIO DE IDEMPOTENCIA: CUMPLIDO (inventario changed=0; actualización
+sin cambios en los servidores en la segunda ejecución)
+MANEJO DE ERRORES: CUMPLIDO (FAILED y UNREACHABLE en el mismo resumen)
+========================================================================

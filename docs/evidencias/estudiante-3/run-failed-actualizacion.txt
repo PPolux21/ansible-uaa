@@ -1,0 +1,60 @@
+ansible-playbook -i ~/pruebaAnsibleDB/hosts_fallo.yml playbooks/actualizar_servidores.yml -e simular_fallo=true
+BECOME password:
+
+PLAY [Actualización de paquetes de los servidores] ***********************************************************************************
+
+TASK [Gathering Facts] ***************************************************************************************************************
+[ERROR]: Task failed: Failed to connect to the host via ssh: ssh: connect to host 192.168.56.199 port 22: No route to host
+fatal: [srv-falso-99]: UNREACHABLE! =>
+    changed: false
+    msg: 'Task failed: Failed to connect to the host via ssh: ssh: connect to host 192.168.56.199
+        port 22: No route to host'
+    unreachable: true
+ok: [srv-db-01]
+
+TASK [Generar identificador de ejecución] ********************************************************************************************
+ok: [srv-db-01]
+
+TASK [Crear directorio de logs de la ejecución en el nodo de control] ****************************************************************
+changed: [srv-db-01 -> localhost]
+
+TASK [Actualizar caché de apt] *******************************************************************************************************
+ok: [srv-db-01]
+
+TASK [Simular actualización para contar paquetes pendientes] *************************************************************************
+ok: [srv-db-01]
+
+TASK [Guardar paquetes pendientes] ***************************************************************************************************
+ok: [srv-db-01]
+
+TASK [Guardar número de paquetes pendientes] *****************************************************************************************
+ok: [srv-db-01]
+
+TASK [Registrar inicio de la actualización] ******************************************************************************************
+ok: [srv-db-01]
+
+TASK [Simular fallo controlado] ******************************************************************************************************
+[ERROR]: Task failed: Action failed: Fallo controlado: simulación activada con simular_fallo=true
+Origin: /home/diego/ansible-uaa/playbooks/actualizar_servidores.yml:50:11
+
+48             act_inicio: "{{ now(fmt='%Y-%m-%d %H:%M:%S') }}"
+49
+50         - name: Simular fallo controlado
+             ^ column 11
+
+fatal: [srv-db-01]: FAILED! =>
+    changed: false
+    msg: 'Fallo controlado: simulación activada con simular_fallo=true'
+
+TASK [Registrar fallo de la actualización] *******************************************************************************************
+ok: [srv-db-01]
+
+TASK [Generar log del servidor en el nodo de control] ********************************************************************************
+changed: [srv-db-01 -> localhost]
+
+TASK [Generar resumen consolidado en el nodo de control] *****************************************************************************
+changed: [srv-db-01 -> localhost]
+
+PLAY RECAP ***************************************************************************************************************************
+srv-db-01                  : ok=11   changed=3    unreachable=0    failed=0    skipped=0    rescued=1    ignored=0
+srv-falso-99               : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0

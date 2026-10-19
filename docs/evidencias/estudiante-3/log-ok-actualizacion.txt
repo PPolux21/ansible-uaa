@@ -1,0 +1,9 @@
+Servidor: srv-db-01
+Ejecución: 2026-10-19_143446
+Inicio: 2026-10-19 14:34:52
+Fin: 2026-10-19 14:34:56
+Paquetes pendientes antes: 0
+Paquetes: ninguno
+Reinicio requerido: no
+Estado: OK
+Error: -

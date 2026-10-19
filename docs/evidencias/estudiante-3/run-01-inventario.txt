@@ -1,0 +1,24 @@
+
+PLAY [Inventario técnico de los servidores] ************************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [srv-db-01]
+
+TASK [Consultar estado de Ubuntu Pro] ******************************************
+ok: [srv-db-01]
+
+TASK [Armar ficha técnica del servidor] ****************************************
+ok: [srv-db-01]
+
+TASK [Fijar fecha del reporte] *************************************************
+ok: [srv-db-01]
+
+TASK [Crear directorio de reportes de inventario en el nodo de control] ********
+ok: [srv-db-01 -> localhost]
+
+TASK [Generar reporte consolidado de inventario] *******************************
+ok: [srv-db-01 -> localhost]
+
+PLAY RECAP *********************************************************************
+srv-db-01                  : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+

@@ -1,0 +1,12 @@
+Resumen de actualización de servidores
+Ejecución: 2026-10-19_143446
+
+Host             Estado       Pendientes Reinicio  Inicio              Fin
+------------------------------------------------------------------------------------------
+srv-db-01        OK           0          no        2026-10-19 14:34:52 2026-10-19 14:34:56
+------------------------------------------------------------------------------------------
+
+Total de servidores: 1
+OK: 1
+FAILED: 0
+UNREACHABLE: 0

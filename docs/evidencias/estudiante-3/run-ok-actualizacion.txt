@@ -1,0 +1,54 @@
+
+PLAY [Actualización de paquetes de los servidores] *****************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [srv-db-01]
+
+TASK [Generar identificador de ejecución] **************************************
+ok: [srv-db-01]
+
+TASK [Crear directorio de logs de la ejecución en el nodo de control] **********
+changed: [srv-db-01 -> localhost]
+
+TASK [Actualizar caché de apt] *************************************************
+ok: [srv-db-01]
+
+TASK [Simular actualización para contar paquetes pendientes] *******************
+ok: [srv-db-01]
+
+TASK [Guardar paquetes pendientes] *********************************************
+ok: [srv-db-01]
+
+TASK [Guardar número de paquetes pendientes] ***********************************
+ok: [srv-db-01]
+
+TASK [Registrar inicio de la actualización] ************************************
+ok: [srv-db-01]
+
+TASK [Aplicar actualización de paquetes] ***************************************
+ok: [srv-db-01]
+
+TASK [Comprobar si el sistema pide reinicio] ***********************************
+ok: [srv-db-01]
+
+TASK [Comprobar si existe la lista de paquetes que piden reinicio] *************
+ok: [srv-db-01]
+
+TASK [Leer paquetes que piden reinicio] ****************************************
+skipping: [srv-db-01]
+
+TASK [Guardar estado de reinicio] **********************************************
+ok: [srv-db-01]
+
+TASK [Registrar fin y estado de la actualización] ******************************
+ok: [srv-db-01]
+
+TASK [Generar log del servidor en el nodo de control] **************************
+changed: [srv-db-01 -> localhost]
+
+TASK [Generar resumen consolidado en el nodo de control] ***********************
+changed: [srv-db-01 -> localhost]
+
+PLAY RECAP *********************************************************************
+srv-db-01                  : ok=15   changed=3    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+

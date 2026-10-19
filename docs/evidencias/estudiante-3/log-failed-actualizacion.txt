@@ -1,0 +1,9 @@
+Servidor: srv-db-01
+Ejecución: 2026-10-19_140411
+Inicio: 2026-10-19 14:04:17
+Fin: 2026-10-19 14:04:17
+Paquetes pendientes antes: 0
+Paquetes: ninguno
+Reinicio requerido: -
+Estado: FAILED
+Error: Simular fallo controlado: Fallo controlado: simulación activada con simular_fallo=true
