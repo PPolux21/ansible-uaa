@@ -1,0 +1,32 @@
+---
+- name: Inventario técnico de los servidores
+  hosts: all
+  become: false
+  gather_facts: true
+
+  tasks:
+    # Solo lectura: si pro no existe o falla, se reporta como "no disponible"
+    - name: Consultar estado de Ubuntu Pro
+      ansible.builtin.command: pro status --format json
+      register: inv_pro
+      changed_when: false
+      failed_when: false
+
+    - name: Armar ficha técnica del servidor
+      ansible.builtin.set_fact:
+        inv_ficha:
+          hostname: "{{ ansible_facts['hostname'] }}"
+          ubuntu: "{{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+          ip_hamachi: "{{ ansible_facts['ham0']['ipv4']['address'] | default('sin ham0') }}"
+          cpu_vcpus: "{{ ansible_facts['processor_vcpus'] }}"
+          ram_mb: "{{ ansible_facts['memtotal_mb'] }}"
+          disco_total_gb: "{{ (inv_raiz['size_total'] / 1024**3) | round(1) }}"
+          disco_libre_gb: "{{ (inv_raiz['size_available'] / 1024**3) | round(1) }}"
+          ubuntu_pro: "{{ 'no disponible' if inv_pro.rc != 0 else ('adjunto' if (inv_pro.stdout | from_json)['attached'] else 'no adjunto') }}"
+      vars:
+        # Solo el montaje raíz; se descartan los squashfs de snaps
+        inv_raiz: "{{ ansible_facts['mounts'] | selectattr('mount', 'equalto', '/') | first }}"
+
+    - name: Mostrar ficha técnica del servidor
+      ansible.builtin.debug:
+        var: inv_ficha
