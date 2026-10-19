@@ -1,0 +1,25 @@
+Resumen de actualización de servidores
+Ejecución: {{ act_id_ejecucion }}
+
+{% set act_cuenta = namespace(ok=0, failed=0, unreachable=0) %}
+{{ '%-16s %-12s %-10s %-9s %-19s %s' | format('Host', 'Estado', 'Pendientes', 'Reinicio', 'Inicio', 'Fin') }}
+{{ '-' * 90 }}
+{% for host in ansible_play_hosts_all | sort %}
+{% set datos = hostvars[host] %}
+{% set estado = datos['act_estado'] | default('UNREACHABLE') %}
+{% if estado == 'OK' %}
+{% set act_cuenta.ok = act_cuenta.ok + 1 %}
+{% elif estado == 'FAILED' %}
+{% set act_cuenta.failed = act_cuenta.failed + 1 %}
+{% else %}
+{% set act_cuenta.unreachable = act_cuenta.unreachable + 1 %}
+{% endif %}
+{% set reinicio = (('sí' if datos['act_reinicio'] else 'no') if datos['act_reinicio'] is defined else '-') %}
+{{ '%-16s %-12s %-10s %-9s %-19s %s' | format(host, estado, datos['act_pendientes'] | default('-'), reinicio, datos['act_inicio'] | default('-'), datos['act_fin'] | default('-')) }}
+{% endfor %}
+{{ '-' * 90 }}
+
+Total de servidores: {{ ansible_play_hosts_all | length }}
+OK: {{ act_cuenta.ok }}
+FAILED: {{ act_cuenta.failed }}
+UNREACHABLE: {{ act_cuenta.unreachable }}

@@ -1,0 +1,9 @@
+Servidor: {{ inventory_hostname }}
+Ejecución: {{ act_id_ejecucion }}
+Inicio: {{ act_inicio | default('-') }}
+Fin: {{ act_fin | default('-') }}
+Paquetes pendientes antes: {{ act_pendientes | default('-') }}
+Paquetes: {{ (act_pendientes_lista | join(', ') if act_pendientes_lista else 'ninguno') if act_pendientes_lista is defined else '-' }}
+Reinicio requerido: {{ ('sí' if act_reinicio else 'no') if act_reinicio is defined else '-' }}{{ ' (' ~ act_reinicio_pkgs | join(', ') ~ ')' if act_reinicio_pkgs | default([]) else '' }}
+Estado: {{ act_estado | default('-') }}
+Error: {{ act_error | default('-') }}

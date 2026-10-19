@@ -4,11 +4,23 @@
   become: true
   gather_facts: true
 
+  vars:
+    act_dir_logs: "{{ playbook_dir }}/../logs/actualizacion/{{ act_id_ejecucion }}"
+
   tasks:
     - name: Generar identificador de ejecución
       ansible.builtin.set_fact:
         act_id_ejecucion: "{{ now(fmt='%Y-%m-%d_%H%M%S') }}"
       run_once: true
+
+    - name: Crear directorio de logs de la ejecución en el nodo de control
+      ansible.builtin.file:
+        path: "{{ act_dir_logs }}"
+        state: directory
+        mode: "0755"
+      run_once: true
+      delegate_to: localhost
+      become: false
 
     - name: Actualizar caché de apt
       ansible.builtin.apt:
@@ -64,13 +76,19 @@
         act_fin: "{{ now(fmt='%Y-%m-%d %H:%M:%S') }}"
         act_estado: OK
 
-    - name: Mostrar resumen del servidor
-      ansible.builtin.debug:
-        msg:
-          - "Ejecución: {{ act_id_ejecucion }}"
-          - "Inicio: {{ act_inicio }}"
-          - "Fin: {{ act_fin }}"
-          - "Paquetes pendientes antes: {{ act_pendientes }}"
-          - "Paquetes: {{ act_pendientes_lista | join(', ') if act_pendientes_lista else 'ninguno' }}"
-          - "Reinicio requerido: {{ 'sí' if act_reinicio else 'no' }}{{ ' (' ~ act_reinicio_pkgs | join(', ') ~ ')' if act_reinicio_pkgs else '' }}"
-          - "Estado: {{ act_estado }}"
+    - name: Generar log del servidor en el nodo de control
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/actualizacion_host.log.j2"
+        dest: "{{ act_dir_logs }}/{{ inventory_hostname }}.log"
+        mode: "0644"
+      delegate_to: localhost
+      become: false
+
+    - name: Generar resumen consolidado en el nodo de control
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/actualizacion_resumen.log.j2"
+        dest: "{{ act_dir_logs }}/resumen.log"
+        mode: "0644"
+      run_once: true
+      delegate_to: localhost
+      become: false
