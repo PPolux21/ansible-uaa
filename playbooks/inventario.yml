@@ -27,6 +27,26 @@
         # Solo el montaje raíz; se descartan los squashfs de snaps
         inv_raiz: "{{ ansible_facts['mounts'] | selectattr('mount', 'equalto', '/') | first }}"
 
-    - name: Mostrar ficha técnica del servidor
-      ansible.builtin.debug:
-        var: inv_ficha
+    # Fecha del nodo de control (solo día, sin hora, para mantener idempotencia)
+    - name: Fijar fecha del reporte
+      ansible.builtin.set_fact:
+        inv_fecha: "{{ now(fmt='%Y-%m-%d') }}"
+      run_once: true
+
+    - name: Crear directorio de reportes de inventario en el nodo de control
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../logs/inventario"
+        state: directory
+        mode: "0755"
+      run_once: true
+      delegate_to: localhost
+      become: false
+
+    - name: Generar reporte consolidado de inventario
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/inventario_reporte.md.j2"
+        dest: "{{ playbook_dir }}/../logs/inventario/inventario_{{ inv_fecha }}.md"
+        mode: "0644"
+      run_once: true
+      delegate_to: localhost
+      become: false
