@@ -2,16 +2,17 @@
 EVIDENCIA DE ACTIVIDAD 11: PERFIL SERVIDOR MARIADB (srv-db-01)
 Responsable de Desarrollo: Estudiante 3
 Integración Técnica: Estudiante 1 (control-ansible)
-Fecha: $(date)
+Fecha: 2026-10-16
 ========================================================================
 1. RECAP EJECUCIÓN 1 (run-01-mariadb.txt):
-$(tail -n 2 docs/evidencias/estudiante-3/run-01-mariadb.txt)
+srv-db-01                  : ok=11   changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 2. RECAP EJECUCIÓN 2 (run-02-mariadb.txt):
-$(tail -n 2 docs/evidencias/estudiante-3/run-02-mariadb.txt)
+srv-db-01                  : ok=10   changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 3. CONSULTA LOCAL SANITIZADA:
-$(cat docs/evidencias/estudiante-3/consulta-local-mariadb.txt)
+VERSION()
+11.8.6-MariaDB-5ubuntu0.1 from Ubuntu
 4. AUDITORÍA DE SEGURIDAD (BIND LOCAL 127.0.0.1):
-$(cat docs/evidencias/estudiante-3/socket-escucha-mariadb.txt)
+tcp   LISTEN 0      80            127.0.0.1:3306       0.0.0.0:*    users:(("mariadbd",pid=3291,fd=28))
 ========================================================================
 CRITERIO DE IDEMPOTENCIA: CUMPLIDO (changed=0 en segunda ejecución)
 SEGURIDAD: CUMPLIDA (Puerto 3306 cerrado hacia Hamachi)
