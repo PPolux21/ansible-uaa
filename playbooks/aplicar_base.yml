@@ -4,3 +4,31 @@
   become: true
   roles:
     - base
+
+  tasks:
+    - name: Imprimir reporte ejecutivo del playbook en terminal
+      ansible.builtin.debug:
+        msg: |
+          ======================================================
+          REPORTE DE EJECUCIÓN: APLICACIÓN DE ROL BASE
+          ======================================================
+          Objetivo: Configurar infraestructura esencial (SSH, DAR, Mutt, etc.) en todos los nodos.
+          
+          ESTADO DE CONFIGURACIÓN POR SERVIDOR:
+          {% for host in ansible_play_hosts_all | sort %}
+          {% if host in ansible_play_hosts %}
+           - {{ host }}: OK (Rol base aplicado correctamente)
+          {% else %}
+           - {{ host }}: UNREACHABLE/FAILED (Servidor apagado, sin Hamachi o falló)
+          {% endif %}
+          {% endfor %}
+          
+          INSTRUCCIONES DEL PLAY RECAP INFERIOR:
+           -> 'unreachable>0': El nodo de control no pudo alcanzar la máquina por red/SSH.
+           -> 'failed=0': Las dependencias y servicios base están listos y seguros.
+           -> 'changed>0': Se instalaron paquetes nuevos o modificaron configuraciones.
+           -> 'changed=0': El servidor ya tenía la infraestructura base lista (Idempotencia).
+          ======================================================
+      run_once: true
+      delegate_to: localhost
+      become: false

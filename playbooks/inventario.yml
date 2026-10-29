@@ -47,3 +47,32 @@
       run_once: true
       delegate_to: localhost
       become: false
+
+    - name: Imprimir reporte ejecutivo del playbook en terminal
+      ansible.builtin.debug:
+        msg: |
+          ======================================================
+          REPORTE DE EJECUCIÓN: INVENTARIO TÉCNICO
+          ======================================================
+          Objetivo: Recolectar información de hardware, red y sistema operativo.
+          Fecha de recolección: {{ inv_fecha }}
+          Reporte completo guardado en: logs/inventario/inventario_{{ inv_fecha }}.md
+          
+          ESTADO DE RECOLECCIÓN POR SERVIDOR:
+          {% for host in ansible_play_hosts_all | sort %}
+          {% set ficha = hostvars[host]['inv_ficha'] | default(none) %}
+          {% if ficha %}
+           - {{ host }}: OK (Ubuntu {{ ficha.ubuntu }}, IP Hamachi: {{ ficha.ip_hamachi }})
+          {% else %}
+           - {{ host }}: UNREACHABLE (Servidor apagado o inaccesible por SSH/Hamachi)
+          {% endif %}
+          {% endfor %}
+          
+          INSTRUCCIONES DEL PLAY RECAP INFERIOR:
+           -> 'unreachable>0': Ansible no pudo alcanzar la máquina.
+           -> 'failed>0': Ocurrió un error recolectando datos del sistema.
+           -> 'changed>0': Se generó y actualizó el archivo Markdown del reporte localmente.
+          ======================================================
+      run_once: true
+      delegate_to: localhost
+      become: false

@@ -102,3 +102,30 @@
       run_once: true
       delegate_to: localhost
       become: false
+
+    - name: Imprimir reporte ejecutivo del playbook en terminal
+      ansible.builtin.debug:
+        msg: |
+          ======================================================
+          REPORTE DE EJECUCIÓN: ACTUALIZACIÓN DE SERVIDORES
+          ======================================================
+          Objetivo: Instalar actualizaciones y evaluar reinicios.
+          ID de ejecución: {{ act_id_ejecucion }}
+          Logs detallados guardados en: {{ act_dir_logs }}
+          
+          ESTADO FINAL POR SERVIDOR:
+          {% for host in ansible_play_hosts_all | sort %}
+          {% set estado = hostvars[host]['act_estado'] | default('UNREACHABLE (Servidor apagado o sin conexión de red)') %}
+          {% set reinicio = hostvars[host]['act_reinicio'] | default(false) %}
+          {% set aviso_reinicio = ' --> [! REINICIO NECESARIO]' if reinicio else '' %}
+           - {{ host }}: {{ estado }}{{ aviso_reinicio }}
+          {% endfor %}
+          
+          INSTRUCCIONES DEL PLAY RECAP INFERIOR:
+           -> 'unreachable>0': Ansible no pudo alcanzar la máquina por SSH/Hamachi.
+           -> 'failed>0': Ocurrió un error durante la actualización de apt.
+           -> 'changed>0': Se descargaron e instalaron paquetes exitosamente.
+          ======================================================
+      run_once: true
+      delegate_to: localhost
+      become: false

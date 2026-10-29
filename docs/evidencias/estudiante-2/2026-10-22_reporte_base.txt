@@ -1,0 +1,46 @@
+
+PLAY [Aplicar rol base a todos los nodos administrados] ************************
+
+TASK [Gathering Facts] *********************************************************
+[ERROR]: Task failed: Failed to connect to the host via ssh: ssh: connect to host 25.1.68.192 port 22: No route to host
+fatal: [srv-db-01]: UNREACHABLE! => 
+    changed: false
+    msg: 'Task failed: Failed to connect to the host via ssh: ssh: connect to host 25.1.68.192
+        port 22: No route to host'
+    unreachable: true
+ok: [srv-admin-01]
+ok: [srv-web-01]
+
+TASK [base : Instalar paquetes comunes del rol base] ***************************
+ok: [srv-admin-01]
+ok: [srv-web-01]
+
+TASK [base : Garantizar que el servicio SSH este activo y habilitado] **********
+ok: [srv-admin-01]
+ok: [srv-web-01]
+
+TASK [Imprimir reporte ejecutivo del playbook en terminal] *********************
+ok: [srv-web-01 -> localhost] => 
+    msg: |-
+        ======================================================
+        REPORTE DE EJECUCIÓN: APLICACIÓN DE ROL BASE
+        ======================================================
+        Objetivo: Configurar infraestructura esencial (SSH, DAR, Mutt, etc.) en todos los nodos.
+
+        ESTADO DE CONFIGURACIÓN POR SERVIDOR:
+         - srv-admin-01: OK (Rol base aplicado correctamente)
+         - srv-db-01: UNREACHABLE/FAILED (Servidor apagado, sin Hamachi o falló)
+         - srv-web-01: OK (Rol base aplicado correctamente)
+
+        INSTRUCCIONES DEL PLAY RECAP INFERIOR:
+         -> 'unreachable>0': El nodo de control no pudo alcanzar la máquina por red/SSH.
+         -> 'failed=0': Las dependencias y servicios base están listos y seguros.
+         -> 'changed>0': Se instalaron paquetes nuevos o modificaron configuraciones.
+         -> 'changed=0': El servidor ya tenía la infraestructura base lista (Idempotencia).
+        ======================================================
+
+PLAY RECAP *********************************************************************
+srv-admin-01               : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+srv-db-01                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+srv-web-01                 : ok=4    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+

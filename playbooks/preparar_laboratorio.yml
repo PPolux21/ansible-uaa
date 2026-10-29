@@ -8,8 +8,36 @@
         name: curl
         state: present
         update_cache: yes
+
     - name: Asegurar que el servicio SSH esta activo y habilitado
       ansible.builtin.service:
         name: ssh
         state: started
         enabled: yes
+
+    - name: Imprimir reporte ejecutivo del playbook en terminal
+      ansible.builtin.debug:
+        msg: |
+          ======================================================
+          REPORTE DE EJECUCIÓN: PREPARACIÓN DE LABORATORIO
+          ======================================================
+          Objetivo: Validar conectividad de red e instalar dependencias básicas.
+          
+          ESTADO DE CONECTIVIDAD POR SERVIDOR:
+          {% for host in ansible_play_hosts_all | sort %}
+          {% if host in ansible_play_hosts %}
+           - {{ host }}: OK (Conectividad exitosa y SSH asegurado)
+          {% else %}
+           - {{ host }}: UNREACHABLE (Servidor inaccesible. Revisar Hamachi o encendido)
+          {% endif %}
+          {% endfor %}
+          
+          INSTRUCCIONES DEL PLAY RECAP INFERIOR:
+           -> 'unreachable>0': El nodo de control no puede alcanzar la máquina en la red.
+           -> 'failed=0': La prueba de conexión y configuración inicial fue exitosa.
+           -> 'changed>0': Se instaló 'curl' o se inició el servicio SSH por primera vez.
+           -> 'changed=0': El servidor ya estaba perfectamente preparado.
+          ======================================================
+      run_once: true
+      delegate_to: localhost
+      become: false

@@ -16,3 +16,30 @@
         name: landscape-client
         enabled: true
         state: started
+
+    - name: Imprimir reporte ejecutivo del playbook en terminal
+      ansible.builtin.debug:
+        msg: |
+          ======================================================
+          REPORTE DE EJECUCIÓN: PERFIL LANDSCAPE CLIENT
+          ======================================================
+          Objetivo: Instalación y habilitación de cliente de administración (Landscape).
+          
+          ESTADO FINAL DEL SERVIDOR:
+          {% for host in ansible_play_hosts_all | sort %}
+          {% if host in ansible_play_hosts %}
+           - {{ host }}: OK (Landscape Client instalado y servicio activo)
+          {% else %}
+           - {{ host }}: UNREACHABLE (Servidor apagado o sin red Hamachi)
+          {% endif %}
+          {% endfor %}
+          
+          INSTRUCCIONES DEL PLAY RECAP INFERIOR:
+           -> 'unreachable>0': Ansible no pudo alcanzar la máquina por SSH/Hamachi.
+           -> 'failed=0': La ejecución fue un éxito y el cliente está activo.
+           -> 'changed>0': Se instaló el paquete o se habilitó el servicio por primera vez.
+           -> 'changed=0': El servidor ya estaba configurado (Idempotencia confirmada).
+          ======================================================
+      run_once: true
+      delegate_to: localhost
+      become: false

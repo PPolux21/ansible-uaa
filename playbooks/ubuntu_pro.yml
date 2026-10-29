@@ -7,6 +7,12 @@
     ubuntu_pro_attach_enabled: false
 
   tasks:
+    - name: Cargar secreto de Ubuntu Pro solo cuando se autorice attach
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../vars/vault/ubuntu_pro.yml"
+      when: ubuntu_pro_attach_enabled | bool
+      no_log: true
+
     - name: Consultar estado de Ubuntu Pro
       ansible.builtin.command:
         cmd: pro status
@@ -24,3 +30,30 @@
         - ubuntu_pro_attach_enabled | bool
         - ubuntu_pro_token is defined
       no_log: true
+
+    - name: Imprimir reporte ejecutivo del playbook en terminal
+      ansible.builtin.debug:
+        msg: |
+          ======================================================
+          REPORTE DE EJECUCIÓN: GESTIÓN DE UBUNTU PRO
+          ======================================================
+          Objetivo: Consultar estado o adjuntar suscripción de Ubuntu Pro de manera segura.
+          
+          ESTADO FINAL DEL SERVIDOR:
+          {% for host in ansible_play_hosts_all | sort %}
+          {% if host in ansible_play_hosts %}
+           - {{ host }}: OK (Estado consultado / Suscripción gestionada)
+          {% else %}
+           - {{ host }}: UNREACHABLE (Servidor apagado o sin red Hamachi)
+          {% endif %}
+          {% endfor %}
+          
+          INSTRUCCIONES DEL PLAY RECAP INFERIOR:
+           -> 'unreachable>0': Ansible no pudo alcanzar la máquina por SSH/Hamachi.
+           -> 'failed=0': La consulta o registro finalizó sin errores.
+           -> 'changed>0': Se adjuntó exitosamente el token de Ubuntu Pro.
+           -> 'changed=0': Solo se consultó el estado (attach deshabilitado) o ya estaba adjunto.
+          ======================================================
+      run_once: true
+      delegate_to: localhost
+      become: false

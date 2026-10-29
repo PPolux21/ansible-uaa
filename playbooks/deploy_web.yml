@@ -5,3 +5,31 @@
   roles:
     - base
     - apache
+
+  tasks:
+    - name: Imprimir reporte ejecutivo del playbook en terminal
+      ansible.builtin.debug:
+        msg: |
+          ======================================================
+          REPORTE DE EJECUCIÓN: PERFIL SERVIDOR WEB
+          ======================================================
+          Objetivo: Instalación de Apache2 y despliegue de página HTML.
+          
+          ESTADO FINAL DEL SERVIDOR:
+          {% for host in ansible_play_hosts_all | sort %}
+          {% if host in ansible_play_hosts %}
+           - {{ host }}: OK (Servidor web activo y configurado)
+          {% else %}
+           - {{ host }}: UNREACHABLE (Servidor apagado o sin red Hamachi)
+          {% endif %}
+          {% endfor %}
+          
+          INSTRUCCIONES DEL PLAY RECAP INFERIOR:
+           -> 'unreachable>0': Ansible no pudo alcanzar la máquina por SSH/Hamachi.
+           -> 'failed=0': La ejecución fue un éxito y el servidor web está activo.
+           -> 'changed>0': Se instalaron paquetes o modificaron archivos nuevos.
+           -> 'changed=0': El servidor ya estaba configurado (Idempotencia confirmada).
+          ======================================================
+      run_once: true
+      delegate_to: localhost
+      become: false

@@ -5,3 +5,24 @@
   roles:
     - base
     - mariadb
+
+  tasks:
+    - name: Imprimir reporte ejecutivo del playbook en terminal
+      ansible.builtin.debug:
+        msg: |
+          ======================================================
+          REPORTE DE EJECUCIÓN: PERFIL BASE DE DATOS (MARIADB)
+          ======================================================
+          Objetivo: Instalación, configuración y bastionado de MariaDB Server.
+          Servidor configurado: {{ inventory_hostname }}
+          
+          ESTADO FINAL DEL SERVIDOR:
+           - Motor de base de datos MariaDB instalado y habilitado.
+           - Seguridad configurada (escuchando de forma segura).
+          
+          INSTRUCCIONES DEL PLAY RECAP INFERIOR:
+           -> 'unreachable>0': Ansible no pudo alcanzar la máquina por SSH/Hamachi.
+           -> 'failed=0': La ejecución fue un éxito y la base de datos está lista.
+           -> 'changed>0': Se instalaron paquetes o modificaron archivos nuevos.
+           -> 'changed=0': El servidor ya estaba configurado (Idempotencia confirmada).
+          ======================================================
