@@ -191,3 +191,152 @@
               - "Tamaño: {{ resp_stat.stat.size }} bytes"
               - "SHA-256: {{ resp_stat.stat.checksum }}"
               - "Filas: {{ resp_estado_respaldo.query_result[0][0].filas }} / CHECKSUM TABLE: {{ resp_estado_respaldo.query_result[1][0].Checksum }}"
+
+    - name: Fase perdida - pérdida controlada de los datos de prueba
+      tags: [perdida]
+      block:
+        - name: Verificar que la pérdida solo afecta a la base de prueba
+          ansible.builtin.assert:
+            that:
+              - resp_db == 'prueba_respaldo'
+            fail_msg: "Pérdida cancelada: resp_db es '{{ resp_db }}', solo se permite 'prueba_respaldo'"
+            success_msg: "Base autorizada para la pérdida controlada: {{ resp_db }}"
+
+        - name: Buscar respaldos existentes antes de borrar
+          ansible.builtin.find:
+            paths: "{{ resp_dir }}"
+            patterns: "{{ resp_db }}_*.sql.gz"
+            file_type: file
+          register: resp_previos
+
+        - name: Verificar que existe al menos un respaldo antes de borrar
+          ansible.builtin.assert:
+            that:
+              - resp_previos.matched > 0
+            fail_msg: "Pérdida cancelada: no hay respaldos de {{ resp_db }} en {{ resp_dir }}"
+            success_msg: "Respaldos disponibles: {{ resp_previos.matched }}"
+
+        - name: Borrar la tabla de prueba (pérdida controlada)
+          community.mysql.mysql_query:
+            login_db: "{{ resp_db }}"
+            query: "DROP TABLE IF EXISTS {{ resp_tabla }}"
+
+        - name: Confirmar que la tabla de prueba ya no existe
+          community.mysql.mysql_query:
+            login_db: information_schema
+            query: >-
+              SELECT COUNT(*) AS existe FROM TABLES
+              WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
+            positional_args:
+              - "{{ resp_db }}"
+              - "{{ resp_tabla }}"
+          register: resp_tras_perdida
+          changed_when: false
+          failed_when: resp_tras_perdida.query_result[0][0].existe | int != 0
+
+    - name: Localizar el respaldo más reciente y sus metadatos
+      tags: [restaurar, verificar]
+      block:
+        - name: Buscar respaldos de la base de prueba
+          ansible.builtin.find:
+            paths: "{{ resp_dir }}"
+            patterns: "{{ resp_db }}_*.sql.gz"
+            file_type: file
+          register: resp_respaldos
+          failed_when: resp_respaldos.matched == 0
+
+        - name: Seleccionar el respaldo más reciente
+          ansible.builtin.set_fact:
+            # El nombre lleva AAAA-MM-DD_HHMMSS, así que el orden alfabético es cronológico.
+            resp_ultimo: "{{ (resp_respaldos.files | sort(attribute='path') | last).path }}"
+
+        - name: Leer metadatos del respaldo seleccionado
+          ansible.builtin.slurp:
+            src: "{{ resp_ultimo | regex_replace('\\.sql\\.gz$', '.meta.json') }}"
+          register: resp_meta_raw
+
+        - name: Cargar metadatos del respaldo
+          ansible.builtin.set_fact:
+            resp_meta_datos: "{{ resp_meta_raw.content | b64decode | from_json }}"
+
+        - name: Obtener SHA-256 actual del respaldo seleccionado
+          ansible.builtin.stat:
+            path: "{{ resp_ultimo }}"
+            checksum_algorithm: sha256
+          register: resp_ultimo_stat
+
+        - name: Verificar integridad del respaldo contra sus metadatos
+          ansible.builtin.assert:
+            that:
+              - resp_ultimo_stat.stat.checksum == resp_meta_datos.sha256
+              - resp_meta_datos.base == resp_db
+            fail_msg: "El respaldo {{ resp_ultimo }} no coincide con sus metadatos"
+            success_msg: "Respaldo íntegro: {{ resp_ultimo }} (SHA-256 {{ resp_meta_datos.sha256 }})"
+
+    - name: Fase restaurar - importar el respaldo más reciente
+      tags: [restaurar]
+      block:
+        - name: Verificar que la restauración solo afecta a la base de prueba
+          ansible.builtin.assert:
+            that:
+              - resp_db == 'prueba_respaldo'
+            fail_msg: "Restauración cancelada: resp_db es '{{ resp_db }}', solo se permite 'prueba_respaldo'"
+            success_msg: "Base autorizada para la restauración: {{ resp_db }}"
+
+        - name: Restaurar el respaldo en la base de prueba
+          # El módulo ejecuta 'mariadb --one-database': solo aplica sentencias de resp_db.
+          community.mysql.mysql_db:
+            name: "{{ resp_db }}"
+            state: import
+            target: "{{ resp_ultimo }}"
+
+    - name: Fase verificar - comparación de datos y puerto 3306
+      tags: [verificar]
+      block:
+        - name: Contar filas y calcular checksum de la tabla (después)
+          community.mysql.mysql_query:
+            login_db: "{{ resp_db }}"
+            query:
+              - "SELECT COUNT(*) AS filas FROM {{ resp_tabla }}"
+              - "CHECKSUM TABLE {{ resp_tabla }}"
+          register: resp_despues
+          changed_when: false
+
+        - name: Comparar datos restaurados contra los metadatos del respaldo
+          ansible.builtin.set_fact:
+            resp_filas_despues: "{{ resp_despues.query_result[0][0].filas | int }}"
+            resp_checksum_despues: "{{ resp_despues.query_result[1][0].Checksum | int }}"
+            resp_resultado: >-
+              {{ 'OK' if (resp_despues.query_result[0][0].filas | int == resp_meta_datos.filas | int
+                          and resp_despues.query_result[1][0].Checksum | int == resp_meta_datos.checksum_tabla | int)
+                 else 'FAILED' }}
+
+        - name: Consultar sockets TCP en escucha en el puerto 3306
+          ansible.builtin.command: ss -ltnH sport = :3306
+          register: resp_ss
+          changed_when: false
+
+        - name: Verificar que MariaDB escucha solo en 127.0.0.1
+          ansible.builtin.assert:
+            that:
+              - resp_escucha | length > 0
+              - resp_escucha | reject('equalto', '127.0.0.1:3306') | list | length == 0
+            fail_msg: "MariaDB escucha fuera de localhost: {{ resp_escucha }}"
+            success_msg: "MariaDB escucha solo en: {{ resp_escucha | join(', ') }}"
+          vars:
+            resp_escucha: "{{ resp_ss.stdout_lines | map('split') | map(attribute=3) | list }}"
+
+        - name: Mostrar resultado de la recuperación
+          ansible.builtin.debug:
+            msg:
+              - "Respaldo restaurado: {{ resp_ultimo }}"
+              - "Antes (metadatos): {{ resp_meta_datos.filas }} filas / CHECKSUM {{ resp_meta_datos.checksum_tabla }}"
+              - "Después: {{ resp_filas_despues }} filas / CHECKSUM {{ resp_checksum_despues }}"
+              - "Resultado de recuperación: {{ resp_resultado }}"
+
+        - name: Confirmar resultado OK de la recuperación
+          ansible.builtin.assert:
+            that:
+              - resp_resultado == 'OK'
+            fail_msg: "Recuperación FAILED: los datos restaurados no coinciden con el respaldo"
+            success_msg: "Recuperación OK"
