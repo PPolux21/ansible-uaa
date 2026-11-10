@@ -7,6 +7,9 @@
     resp_db: prueba_respaldo
     resp_tabla: registros
     resp_socket: /run/mysqld/mysqld.sock
+    resp_dir: /var/backups/mariadb
+    # Fecha y hora del servidor al recolectar facts: identifica el respaldo de esta ejecución.
+    resp_fecha: "{{ ansible_facts['date_time']['date'] }}_{{ ansible_facts['date_time']['hour'] }}{{ ansible_facts['date_time']['minute'] }}{{ ansible_facts['date_time']['second'] }}"
     resp_registros:
       - { id: 1, texto: "Alta de servidor srv-db-01", fecha: "2026-11-01" }
       - { id: 2, texto: "Instalacion de MariaDB 11.8", fecha: "2026-11-02" }
@@ -96,3 +99,95 @@
               - "Base: {{ resp_db }} / Tabla: {{ resp_tabla }}"
               - "Filas: {{ resp_antes.query_result[0][0].filas }}"
               - "CHECKSUM TABLE: {{ resp_antes.query_result[1][0].Checksum }}"
+
+    - name: Fase respaldar - respaldo con mariadb-dump y metadatos
+      tags: [respaldar]
+      block:
+        - name: Consultar directorio de datos activo de MariaDB
+          community.mysql.mysql_query:
+            query: "SELECT @@datadir AS datadir"
+          register: resp_datadir
+          changed_when: false
+
+        - name: Verificar que el respaldo queda fuera del directorio de datos activo
+          ansible.builtin.assert:
+            that:
+              - not (resp_dir_norm.startswith(resp_datadir_norm) or resp_datadir_norm.startswith(resp_dir_norm))
+            fail_msg: "{{ resp_dir }} se cruza con el datadir {{ resp_datadir_norm }}"
+            success_msg: "{{ resp_dir }} está fuera del datadir {{ resp_datadir_norm }}"
+          vars:
+            # Se normaliza con '/' final para que /var/lib/mariadb no coincida con /var/lib/mariadb2.
+            resp_dir_norm: "{{ resp_dir | regex_replace('/+$', '') ~ '/' }}"
+            resp_datadir_norm: "{{ resp_datadir.query_result[0][0].datadir | regex_replace('/+$', '') ~ '/' }}"
+
+        - name: Crear directorio de respaldos con permisos restringidos
+          ansible.builtin.file:
+            path: "{{ resp_dir }}"
+            state: directory
+            owner: root
+            group: root
+            mode: "0700"
+
+        - name: Definir rutas del respaldo y sus metadatos
+          ansible.builtin.set_fact:
+            resp_archivo: "{{ resp_dir }}/{{ resp_db }}_{{ resp_fecha }}.sql.gz"
+            resp_meta: "{{ resp_dir }}/{{ resp_db }}_{{ resp_fecha }}.meta.json"
+
+        - name: Contar filas y calcular checksum al momento del respaldo
+          community.mysql.mysql_query:
+            login_db: "{{ resp_db }}"
+            query:
+              - "SELECT COUNT(*) AS filas FROM {{ resp_tabla }}"
+              - "CHECKSUM TABLE {{ resp_tabla }}"
+          register: resp_estado_respaldo
+          changed_when: false
+
+        - name: Generar respaldo lógico comprimido con mariadb-dump
+          community.mysql.mysql_db:
+            name: "{{ resp_db }}"
+            state: dump
+            target: "{{ resp_archivo }}"
+            single_transaction: true
+
+        - name: Restringir permisos del archivo de respaldo
+          ansible.builtin.file:
+            path: "{{ resp_archivo }}"
+            owner: root
+            group: root
+            mode: "0600"
+
+        - name: Obtener tamaño y SHA-256 del respaldo
+          ansible.builtin.stat:
+            path: "{{ resp_archivo }}"
+            checksum_algorithm: sha256
+          register: resp_stat
+
+        - name: Guardar archivo de metadatos junto al respaldo
+          ansible.builtin.copy:
+            dest: "{{ resp_meta }}"
+            owner: root
+            group: root
+            mode: "0600"
+            content: "{{ resp_metadatos | to_nice_json }}\n"
+          vars:
+            resp_metadatos:
+              servidor: "{{ inventory_hostname }}"
+              base: "{{ resp_db }}"
+              tabla: "{{ resp_tabla }}"
+              fecha: "{{ resp_fecha }}"
+              herramienta: mariadb-dump (community.mysql.mysql_db, single-transaction, gzip)
+              datadir: "{{ resp_datadir.query_result[0][0].datadir }}"
+              archivo: "{{ resp_archivo }}"
+              tamano_bytes: "{{ resp_stat.stat.size }}"
+              sha256: "{{ resp_stat.stat.checksum }}"
+              filas: "{{ resp_estado_respaldo.query_result[0][0].filas }}"
+              checksum_tabla: "{{ resp_estado_respaldo.query_result[1][0].Checksum }}"
+
+        - name: Mostrar resumen del respaldo
+          ansible.builtin.debug:
+            msg:
+              - "Respaldo: {{ resp_archivo }}"
+              - "Metadatos: {{ resp_meta }}"
+              - "Tamaño: {{ resp_stat.stat.size }} bytes"
+              - "SHA-256: {{ resp_stat.stat.checksum }}"
+              - "Filas: {{ resp_estado_respaldo.query_result[0][0].filas }} / CHECKSUM TABLE: {{ resp_estado_respaldo.query_result[1][0].Checksum }}"
