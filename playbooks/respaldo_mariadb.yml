@@ -1,0 +1,98 @@
+---
+- name: Respaldo y recuperación de MariaDB
+  hosts: databases
+  become: true
+
+  vars:
+    resp_db: prueba_respaldo
+    resp_tabla: registros
+    resp_socket: /run/mysqld/mysqld.sock
+    resp_registros:
+      - { id: 1, texto: "Alta de servidor srv-db-01", fecha: "2026-11-01" }
+      - { id: 2, texto: "Instalacion de MariaDB 11.8", fecha: "2026-11-02" }
+      - { id: 3, texto: "Configuracion de bind-address", fecha: "2026-11-03" }
+      - { id: 4, texto: "Revision de usuarios anonimos", fecha: "2026-11-04" }
+      - { id: 5, texto: "Inventario tecnico generado", fecha: "2026-11-05" }
+      - { id: 6, texto: "Actualizacion de paquetes", fecha: "2026-11-06" }
+      - { id: 7, texto: "Prueba de respaldo programada", fecha: "2026-11-07" }
+      - { id: 8, texto: "Registro de control final", fecha: "2026-11-08" }
+
+  # Todas las tareas de MariaDB entran como root por unix_socket: no hay contraseñas.
+  module_defaults:
+    community.mysql.mysql_db:
+      login_user: root
+      login_unix_socket: "{{ resp_socket }}"
+    community.mysql.mysql_query:
+      login_user: root
+      login_unix_socket: "{{ resp_socket }}"
+
+  tasks:
+    - name: Fase preparar - base, tabla y datos de prueba
+      tags: [preparar]
+      block:
+        - name: Crear base de datos de prueba
+          community.mysql.mysql_db:
+            name: "{{ resp_db }}"
+            state: present
+            encoding: utf8mb4
+
+        - name: Consultar si la tabla de prueba existe
+          community.mysql.mysql_query:
+            login_db: information_schema
+            query: >-
+              SELECT COUNT(*) AS existe FROM TABLES
+              WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
+            positional_args:
+              - "{{ resp_db }}"
+              - "{{ resp_tabla }}"
+          register: resp_tabla_existe
+          changed_when: false
+
+        - name: Crear tabla de prueba
+          community.mysql.mysql_query:
+            login_db: "{{ resp_db }}"
+            query: >-
+              CREATE TABLE {{ resp_tabla }} (
+                id INT UNSIGNED NOT NULL PRIMARY KEY,
+                texto VARCHAR(100) NOT NULL,
+                fecha DATE NOT NULL
+              ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+          when: resp_tabla_existe.query_result[0][0].existe | int == 0
+
+        - name: Consultar ids existentes en la tabla de prueba
+          community.mysql.mysql_query:
+            login_db: "{{ resp_db }}"
+            query: "SELECT id FROM {{ resp_tabla }}"
+          register: resp_ids
+          changed_when: false
+
+        - name: Insertar registros de prueba faltantes
+          community.mysql.mysql_query:
+            login_db: "{{ resp_db }}"
+            query: "INSERT INTO {{ resp_tabla }} (id, texto, fecha) VALUES (%s, %s, %s)"
+            positional_args:
+              - "{{ item.id }}"
+              - "{{ item.texto }}"
+              - "{{ item.fecha }}"
+          loop: "{{ resp_registros | rejectattr('id', 'in', resp_ids.query_result[0] | map(attribute='id') | list) | list }}"
+          loop_control:
+            label: "{{ item.id }} - {{ item.texto }}"
+
+    - name: Fase consulta_antes - estado de los datos antes del respaldo
+      tags: [consulta_antes]
+      block:
+        - name: Contar filas y calcular checksum de la tabla (antes)
+          community.mysql.mysql_query:
+            login_db: "{{ resp_db }}"
+            query:
+              - "SELECT COUNT(*) AS filas FROM {{ resp_tabla }}"
+              - "CHECKSUM TABLE {{ resp_tabla }}"
+          register: resp_antes
+          changed_when: false
+
+        - name: Mostrar consulta antes del respaldo
+          ansible.builtin.debug:
+            msg:
+              - "Base: {{ resp_db }} / Tabla: {{ resp_tabla }}"
+              - "Filas: {{ resp_antes.query_result[0][0].filas }}"
+              - "CHECKSUM TABLE: {{ resp_antes.query_result[1][0].Checksum }}"
