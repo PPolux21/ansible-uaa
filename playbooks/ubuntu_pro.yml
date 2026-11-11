@@ -1,59 +1,62 @@
 ---
 - name: Gestionar Ubuntu Pro en el servidor administrativo
-  hosts: management
-  become: true
+  hosts: management:&srv-admin-01
+  gather_facts: false
 
   vars:
     ubuntu_pro_attach_enabled: false
 
   tasks:
-    - name: Cargar secreto de Ubuntu Pro solo cuando se autorice attach
-      ansible.builtin.include_vars:
-        file: "{{ playbook_dir }}/../vars/vault/ubuntu_pro.yml"
-      when: ubuntu_pro_attach_enabled | bool
-      no_log: true
-
     - name: Consultar estado de Ubuntu Pro
-      ansible.builtin.command:
-        cmd: pro status
+      ansible.builtin.command: pro status --format json
       register: pro_status
       changed_when: false
-
-    - name: Mostrar estado de Ubuntu Pro
-      ansible.builtin.debug:
-        var: pro_status.stdout_lines
-
-    - name: Adjuntar Ubuntu Pro solo cuando este autorizado
-      ansible.builtin.command:
-        cmd: pro attach "{{ ubuntu_pro_token }}"
-      when:
-        - ubuntu_pro_attach_enabled | bool
-        - ubuntu_pro_token is defined
+      check_mode: false
       no_log: true
 
-    - name: Imprimir reporte ejecutivo del playbook en terminal
+    - name: Guardar solo si Ubuntu Pro está adjunto
+      ansible.builtin.set_fact:
+        pro_adjunto: "{{ (pro_status.stdout | from_json)['attached'] }}"
+      no_log: true
+
+    - name: Adjuntar Ubuntu Pro solo cuando esté autorizado
+      when:
+        - ubuntu_pro_attach_enabled | bool
+        - not pro_adjunto
+        - not ansible_check_mode
+      block:
+        - name: Cargar secreto cifrado de Ubuntu Pro
+          ansible.builtin.include_vars:
+            file: "{{ playbook_dir }}/../vars/vault/vault.yml"
+          no_log: true
+
+        - name: Verificar que el Vault contiene el token
+          ansible.builtin.assert:
+            that: (ubuntu_pro_token | default('') | length) > 0
+          no_log: true
+
+        - name: Adjuntar Ubuntu Pro en srv-admin-01
+          ansible.builtin.command:
+            argv:
+              - pro
+              - attach
+              - "{{ ubuntu_pro_token }}"
+          become: true
+          no_log: true
+
+        - name: Verificar el estado después del attach
+          ansible.builtin.command: pro status --format json
+          register: pro_status_despues
+          changed_when: false
+          failed_when: >-
+            pro_status_despues.rc != 0 or
+            not (pro_status_despues.stdout | from_json)['attached']
+          no_log: true
+
+        - name: Registrar el estado verificado
+          ansible.builtin.set_fact:
+            pro_adjunto: true
+
+    - name: Mostrar estado sin datos de cuenta
       ansible.builtin.debug:
-        msg: |
-          ======================================================
-          REPORTE DE EJECUCIÓN: GESTIÓN DE UBUNTU PRO
-          ======================================================
-          Objetivo: Consultar estado o adjuntar suscripción de Ubuntu Pro de manera segura.
-          
-          ESTADO FINAL DEL SERVIDOR:
-          {% for host in ansible_play_hosts_all | sort %}
-          {% if host in ansible_play_hosts %}
-           - {{ host }}: OK (Estado consultado / Suscripción gestionada)
-          {% else %}
-           - {{ host }}: UNREACHABLE (Servidor apagado o sin red Hamachi)
-          {% endif %}
-          {% endfor %}
-          
-          INSTRUCCIONES DEL PLAY RECAP INFERIOR:
-           -> 'unreachable>0': Ansible no pudo alcanzar la máquina por SSH/Hamachi.
-           -> 'failed=0': La consulta o registro finalizó sin errores.
-           -> 'changed>0': Se adjuntó exitosamente el token de Ubuntu Pro.
-           -> 'changed=0': Solo se consultó el estado (attach deshabilitado) o ya estaba adjunto.
-          ======================================================
-      run_once: true
-      delegate_to: localhost
-      become: false
+        msg: "Ubuntu Pro en {{ inventory_hostname }}: {{ 'adjunto' if pro_adjunto else 'no adjunto' }}"

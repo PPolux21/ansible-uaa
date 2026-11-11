@@ -1,21 +1,27 @@
-# Registro de Problemas Conocidos y Soluciones Técnicas Aplicadas
+# Problemas conocidos y mitigaciones
 
-### 1. Congelamiento del Kernel Linux en VirtualBox 7.x (Intel 13ª Gen / Ubuntu 24.04)
-* **Síntoma:** Al arrancar o restaurar un snapshot, la VM se congelaba en la rutina del benchmark de instrucciones vectoriales AVX2 (`raid6: avx2x2 gen()`).
-* **Causa Raíz:** Incompatibilidad de temporizadores entre el motor de virtualización de VirtualBox sobre Windows 11 con Hyper-V y los snapshots tomados con la máquina encendida (*live state*).
-* **Solución:** Configurar la interfaz de paravirtualización en modo **`KVM`**, controlador gráfico **`VMSVGA`** sin aceleración 3D, y tomar snapshots obligatoriamente con la máquina en estado **Apagada** (*en frío*).
+## Hamachi, MTU y SSH
 
-### 2. Bloqueo de Ejecución por Cifrado de Ansible Vault
-* **Síntoma:** Error `[ERROR]: Attempting to decrypt but no vault secrets found` al ejecutar tareas Ad-Hoc o playbooks.
-* **Causa Raíz:** Existencia de archivos cifrados en `group_vars/` (para credenciales de MariaDB o tokens de Ubuntu Pro). Ansible intenta descifrar automáticamente todas las variables al iniciar.
-* **Solución:** Incluir la bandera `--ask-vault-pass` (o `-J`) para proporcionar la contraseña maestra en tiempo de ejecución.
+Los nodos están en cuatro laptops. La prueba integral depende de que las cuatro VM y Hamachi estén disponibles. Antes de empezar, confirma las direcciones de `ham0` y compara con el inventario de laboratorio.
 
-### 3. Fallo de Verificación de Huella SSH al Cambiar de Entorno (`Host key verification failed`)
-* **Síntoma:** SSH bloqueaba la conexión no interactiva de Ansible al alternar entre la red remota (Hamachi `25.x.x.x`) y la red local del laboratorio (`10.13.x.x`).
-* **Causa Raíz:** Las direcciones IP locales no se encontraban registradas en el archivo `~/.ssh/known_hosts`.
-* **Solución:** Registrar las huellas criptográficas mediante escaneo previo: `ssh-keyscan -t ed25519 <IP> >> ~/.ssh/known_hosts`.
+En las pruebas del equipo, el intercambio SSH fallaba con MTU 1500 y 1400 y funcionó con 1300 o menos. Inspecciona el MTU de `ham0` con `ip -o link show dev ham0` tras restaurar. Si el síntoma reaparece, verifica la ruta con los propietarios y recupera el ajuste probado donde sea necesario. Registra el valor por VM.
 
-### 4. Advertencia de Inventario Vacío por Directorio de Ejecución
-* **Síntoma:** `[WARNING]: No inventory was parsed, only implicit localhost is available` al ejecutar dentro de `playbooks/`.
-* **Causa Raíz:** Ansible busca `./ansible.cfg` en el directorio de trabajo actual. Al estar dentro de una subcarpeta, no encontraba el archivo de configuración de la raíz.
-* **Solución:** Ubicarse siempre en la raíz del proyecto (`~/ansible-uaa`) o definir la variable global `export ANSIBLE_CONFIG="$HOME/ansible-uaa/ansible.cfg"` en `~/.bashrc`.
+Si cambia la huella SSH al restaurar, contrástala con la huella de la VM obtenida por el propietario con `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`. Actualiza sólo la entrada comprobada de `known_hosts` y mantén habilitada la verificación.
+
+## Sudo y Vault
+
+El usuario SSH es `automatizacion`. Para tareas que necesitan root, Ansible usa sudo y, si se requiere, `-K` solicita la contraseña de ese usuario. Si falla, prueba `sudo -v` como `automatizacion` en el nodo afectado y revisa la política sudo. La cuenta root puede seguir bloqueada para login directo.
+
+El Vault cargado automáticamente desde `group_vars/management` era la causa histórica de los errores de descifrado en operaciones simples. El cifrado se conserva en `vars/vault/vault.yml`. El play de Ubuntu Pro lo abre sólo cuando se autoriza un attach y la VM aún está sin adjuntar. Ping y las consultas habituales funcionan sin `-J`.
+
+## APT, kernel y reinicio
+
+El desempaquetado de kernel y headers de `srv-admin-01` tardó considerablemente y luego continuó en APT. Si vuelve a ocurrir, comprueba el avance de `apt-get` y `dpkg` en la VM y el registro local de dpkg. Espera mientras el trabajo progrese. Una espera larga por sí sola no demuestra un fallo.
+
+El playbook registra `/var/run/reboot-required` y los paquetes asociados si están disponibles. E4 y el propietario deciden cuándo reiniciar. Al recuperar la VM, comprueba `uname -r`, ping y los servicios del perfil.
+
+## Arranque y directorio de trabajo
+
+En el caso previo de VirtualBox 7.x sobre Windows 11 con Hyper-V, el equipo registró una congelación al restaurar un snapshot activo durante el arranque del kernel. Para la VM afectada, la mitigación documentada fue usar paravirtualización KVM, VMSVGA sin aceleración 3D y snapshots con la VM apagada. Verifica la configuración del hipervisor con su propietario si reaparece.
+
+Ejecuta Ansible desde la raíz del repositorio para que cargue `ansible.cfg`, el inventario y los roles esperados.

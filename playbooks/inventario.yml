@@ -10,31 +10,42 @@
       register: inv_pro
       changed_when: false
       failed_when: false
+      check_mode: false
+      no_log: true
+
+    - name: Medir espacio total y disponible de la raíz
+      ansible.builtin.command: df -Pk /
+      register: inv_disco
+      changed_when: false
+      check_mode: false
 
     - name: Armar ficha técnica del servidor
       ansible.builtin.set_fact:
         inv_ficha:
           hostname: "{{ ansible_facts['hostname'] }}"
           ubuntu: "{{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+          ip_inventario: "{{ ansible_host | default(inventory_hostname) }}"
           ip_hamachi: "{{ ansible_facts['ham0']['ipv4']['address'] | default('sin ham0') }}"
           cpu_vcpus: "{{ ansible_facts['processor_vcpus'] }}"
           ram_mb: "{{ ansible_facts['memtotal_mb'] }}"
-          disco_total_gb: "{{ (inv_raiz['size_total'] / 1024**3) | round(1) }}"
-          disco_libre_gb: "{{ (inv_raiz['size_available'] / 1024**3) | round(1) }}"
+          disco_total_gb: "{{ (inv_raiz[1] | int / 1024**2) | round(1) }}"
+          disco_libre_gb: "{{ (inv_raiz[3] | int / 1024**2) | round(1) }}"
           ubuntu_pro: "{{ 'no disponible' if inv_pro.rc != 0 else ('adjunto' if (inv_pro.stdout | from_json)['attached'] else 'no adjunto') }}"
       vars:
-        inv_raiz: "{{ ansible_facts['mounts'] | selectattr('mount', 'equalto', '/') | first }}"
+        inv_raiz: "{{ inv_disco.stdout_lines[-1].split() }}"
+      no_log: true
 
-    - name: Fijar fecha del reporte
+    - name: Fijar fecha e identificador del reporte
       ansible.builtin.set_fact:
-        inv_fecha: "{{ now(fmt='%Y-%m-%d') }}"
+        inv_fecha: "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%SZ') }}"
+        inv_id: "{{ now(utc=true, fmt='%Y-%m-%d_%H%M%S_%f') }}"
       run_once: true
 
     - name: Crear directorio de reportes de inventario en el nodo de control
       ansible.builtin.file:
         path: "{{ playbook_dir }}/../logs/inventario"
         state: directory
-        mode: "0755"
+        mode: "0700"
       run_once: true
       delegate_to: localhost
       become: false
@@ -42,8 +53,8 @@
     - name: Generar reporte consolidado de inventario
       ansible.builtin.template:
         src: "{{ playbook_dir }}/../templates/inventario_reporte.md.j2"
-        dest: "{{ playbook_dir }}/../logs/inventario/inventario_{{ inv_fecha }}.md"
-        mode: "0644"
+        dest: "{{ playbook_dir }}/../logs/inventario/inventario_{{ inv_id }}.md"
+        mode: "0600"
       run_once: true
       delegate_to: localhost
       become: false
@@ -56,15 +67,15 @@
           ======================================================
           Objetivo: Recolectar información de hardware, red y sistema operativo.
           Fecha de recolección: {{ inv_fecha }}
-          Reporte completo guardado en: logs/inventario/inventario_{{ inv_fecha }}.md
+          Reporte completo guardado en: logs/inventario/inventario_{{ inv_id }}.md
           
           ESTADO DE RECOLECCIÓN POR SERVIDOR:
           {% for host in ansible_play_hosts_all | sort %}
           {% set ficha = hostvars[host]['inv_ficha'] | default(none) %}
           {% if ficha %}
-           - {{ host }}: OK (Ubuntu {{ ficha.ubuntu }}, IP Hamachi: {{ ficha.ip_hamachi }})
+           - {{ host }}: OK ({{ ficha.ubuntu }}, IP Hamachi: {{ ficha.ip_hamachi }})
           {% else %}
-           - {{ host }}: UNREACHABLE (Servidor apagado o inaccesible por SSH/Hamachi)
+           - {{ host }}: SIN FICHA (consultar el recap)
           {% endif %}
           {% endfor %}
           

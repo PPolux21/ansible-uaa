@@ -2,11 +2,11 @@ Resumen de actualización de servidores
 Ejecución: {{ act_id_ejecucion }}
 
 {% set act_cuenta = namespace(ok=0, failed=0, unreachable=0) %}
-{{ '%-16s %-12s %-10s %-9s %-19s %s' | format('Host', 'Estado', 'Pendientes', 'Reinicio', 'Inicio', 'Fin') }}
-{{ '-' * 90 }}
+{{ '%-16s %-12s %-8s %-8s %-9s %-20s %s' | format('Host', 'Estado', 'Antes', 'Después', 'Reinicio', 'Inicio (UTC)', 'Fin (UTC)') }}
+{{ '-' * 104 }}
 {% for host in ansible_play_hosts_all | sort %}
 {% set datos = hostvars[host] %}
-{% set estado = datos['act_estado'] | default('UNREACHABLE') %}
+{% set estado = datos['act_estado'] %}
 {% if estado == 'OK' %}
 {% set act_cuenta.ok = act_cuenta.ok + 1 %}
 {% elif estado == 'FAILED' %}
@@ -15,9 +15,11 @@ Ejecución: {{ act_id_ejecucion }}
 {% set act_cuenta.unreachable = act_cuenta.unreachable + 1 %}
 {% endif %}
 {% set reinicio = (('sí' if datos['act_reinicio'] else 'no') if datos['act_reinicio'] is defined else '-') %}
-{{ '%-16s %-12s %-10s %-9s %-19s %s' | format(host, estado, datos['act_pendientes'] | default('-'), reinicio, datos['act_inicio'] | default('-'), datos['act_fin'] | default('-')) }}
+{% set antes = (datos['act_pendientes_lista'] | length) if datos['act_pendientes_lista'] is defined else '-' %}
+{% set despues = (datos['act_pendientes_despues'] | length) if datos['act_pendientes_despues'] is defined else '-' %}
+{{ '%-16s %-12s %-8s %-8s %-9s %-20s %s' | format(host, estado, antes, despues, reinicio, datos['act_inicio'], datos['act_fin']) }}
 {% endfor %}
-{{ '-' * 90 }}
+{{ '-' * 104 }}
 
 Total de servidores: {{ ansible_play_hosts_all | length }}
 OK: {{ act_cuenta.ok }}

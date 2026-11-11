@@ -1,56 +1,97 @@
 ---
 - name: Actualización de paquetes de los servidores
   hosts: all
-  become: true
-  gather_facts: true
+  gather_facts: false
 
   vars:
-    act_dir_logs: "{{ playbook_dir }}/../logs/actualizacion/{{ act_id_ejecucion }}"
+    simular_fallo: false
+    act_raiz_logs: "{{ playbook_dir }}/../logs/actualizacion"
+    act_dir_logs: "{{ act_directorio.path }}"
+    act_id_ejecucion: "{{ act_dir_logs | basename }}"
 
   tasks:
-    - name: Generar identificador de ejecución
-      ansible.builtin.set_fact:
-        act_id_ejecucion: "{{ now(fmt='%Y-%m-%d_%H%M%S') }}"
+    - name: Comprobar modo de ejecución
+      ansible.builtin.assert:
+        that:
+          - not ansible_check_mode
+          - not (simular_fallo | bool) or (ansible_play_hosts_all | length == 1)
+        fail_msg: Usar ejecución normal y limitar la simulación de fallo a un solo host.
       run_once: true
 
-    - name: Crear directorio de logs de la ejecución en el nodo de control
+    - name: Crear directorio de logs en el nodo de control
       ansible.builtin.file:
-        path: "{{ act_dir_logs }}"
+        path: "{{ act_raiz_logs }}"
         state: directory
-        mode: "0755"
+        mode: "0700"
       run_once: true
       delegate_to: localhost
-      become: false
+
+    - name: Reservar directorio único para la ejecución
+      ansible.builtin.tempfile:
+        path: "{{ act_raiz_logs }}"
+        state: directory
+        prefix: "{{ now(utc=true, fmt='%Y-%m-%d_%H%M%S_') }}"
+      register: act_directorio
+      run_once: true
+      delegate_to: localhost
+
+    - name: Registrar inicio
+      ansible.builtin.set_fact:
+        act_inicio: "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%SZ') }}"
 
     - name: Actualizar servidor y registrar resultado
+      # Mantiene el host en el play para escribir su log aun si cae SSH.
+      ignore_unreachable: true
+      when: not act_sin_conexion
+      vars:
+        act_sin_conexion: >-
+          {{ [
+            act_cache | default({}), act_simulacion | default({}),
+            act_upgrade | default({}), act_simulacion_despues | default({}),
+            act_reinicio_archivo | default({}), act_reinicio_pkgs_archivo | default({}),
+            act_reinicio_pkgs_contenido | default({})
+          ] | select('unreachable') | list | length > 0 }}
       block:
+        - name: Simular fallo controlado antes de tocar apt
+          ansible.builtin.fail:
+            msg: Fallo controlado activado con simular_fallo=true.
+          when: simular_fallo | bool
+
         - name: Actualizar caché de apt
           ansible.builtin.apt:
             update_cache: true
+          become: true
+          register: act_cache
+          no_log: true
           changed_when: false
 
-        - name: Simular actualización para contar paquetes pendientes
+        - name: Simular actualización para contar paquetes pendientes antes
           ansible.builtin.command: apt-get -s upgrade --with-new-pkgs
           register: act_simulacion
+          no_log: true
           changed_when: false
 
-        - name: Guardar paquetes pendientes
+        - name: Guardar lista de paquetes pendientes antes
           ansible.builtin.set_fact:
             act_pendientes_lista: "{{ act_simulacion.stdout_lines | select('match', '^Inst ') | map('regex_replace', '^Inst (\\S+).*$', '\\1') | list }}"
-
-        - name: Guardar número de paquetes pendientes
-          ansible.builtin.set_fact:
-            act_pendientes: "{{ act_pendientes_lista | length }}"
-
-        - name: Registrar inicio de la actualización
-          ansible.builtin.set_fact:
-            act_inicio: "{{ now(fmt='%Y-%m-%d %H:%M:%S') }}"
 
         - name: Aplicar actualización de paquetes
           ansible.builtin.apt:
             upgrade: safe
             force_apt_get: true
+          become: true
           register: act_upgrade
+          no_log: true
+
+        - name: Simular actualización para contar paquetes pendientes después
+          ansible.builtin.command: apt-get -s upgrade --with-new-pkgs
+          register: act_simulacion_despues
+          no_log: true
+          changed_when: false
+
+        - name: Guardar lista de paquetes pendientes después
+          ansible.builtin.set_fact:
+            act_pendientes_despues: "{{ act_simulacion_despues.stdout_lines | select('match', '^Inst ') | map('regex_replace', '^Inst (\\S+).*$', '\\1') | list }}"
 
         - name: Comprobar si el sistema pide reinicio
           ansible.builtin.stat:
@@ -68,64 +109,55 @@
           register: act_reinicio_pkgs_contenido
           when: act_reinicio_pkgs_archivo.stat.exists
 
-        - name: Guardar estado de reinicio
+        - name: Guardar estado de reinicio y resultado
           ansible.builtin.set_fact:
+            act_estado: OK
             act_reinicio: "{{ act_reinicio_archivo.stat.exists }}"
             act_reinicio_pkgs: "{{ (act_reinicio_pkgs_contenido.content | b64decode).splitlines() | unique | list if act_reinicio_pkgs_archivo.stat.exists else [] }}"
 
-        - name: Registrar fin y estado de la actualización
-          ansible.builtin.set_fact:
-            act_fin: "{{ now(fmt='%Y-%m-%d %H:%M:%S') }}"
-            act_estado: OK
-
       rescue:
-        - name: Registrar fallo de la actualización
+        - name: Registrar causa sin copiar salidas que puedan contener credenciales
           ansible.builtin.set_fact:
-            act_fin: "{{ now(fmt='%Y-%m-%d %H:%M:%S') }}"
             act_estado: FAILED
-            act_error: "{{ ansible_failed_task.name }}: {{ ansible_failed_result.msg | default('sin mensaje de error') }}"
+            act_error: >-
+              {{ ansible_failed_task.name }}: {% if simular_fallo | bool %}fallo de prueba, sin cambios de paquetes.
+              {% elif act_detalle is search('sudo|become') %}revisar sudo de automatizacion.
+              {% elif act_detalle is search('could not get lock|unable to acquire|failed to lock') %}apt/dpkg ocupado.
+              {% elif act_detalle is search('no space left|not enough free space') %}espacio insuficiente.
+              {% elif act_detalle is search('dpkg.*(error|interrupt)') %}dpkg informó un error de paquetes.
+              {% elif ansible_failed_result.rc is defined %}código {{ ansible_failed_result.rc }}, revisar diagnóstico local de la tarea.
+              {% else %}revisar diagnóstico local de la tarea.
+              {% endif %}
+          vars:
+            act_detalle: "{{ (ansible_failed_result.msg | default('') ~ ' ' ~ ansible_failed_result.stderr | default('')) | lower }}"
 
-      always:
-        - name: Generar log del servidor en el nodo de control
-          ansible.builtin.template:
-            src: "{{ playbook_dir }}/../templates/actualizacion_host.log.j2"
-            dest: "{{ act_dir_logs }}/{{ inventory_hostname }}.log"
-            mode: "0644"
-          delegate_to: localhost
-          become: false
+    - name: Registrar fin y completar el estado si se perdió la conexión
+      ansible.builtin.set_fact:
+        act_fin: "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%SZ') }}"
+        act_estado: "{{ act_estado | default('UNREACHABLE') }}"
+        act_error: "{{ act_error | default('Conexión SSH no disponible' if act_estado is undefined else '-') }}"
+
+    - name: Generar log del servidor en el nodo de control
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/actualizacion_host.log.j2"
+        dest: "{{ act_dir_logs }}/{{ inventory_hostname }}.log"
+        mode: "0600"
+      delegate_to: localhost
 
     - name: Generar resumen consolidado en el nodo de control
       ansible.builtin.template:
         src: "{{ playbook_dir }}/../templates/actualizacion_resumen.log.j2"
         dest: "{{ act_dir_logs }}/resumen.log"
-        mode: "0644"
+        mode: "0600"
       run_once: true
       delegate_to: localhost
-      become: false
 
-    - name: Imprimir reporte ejecutivo del playbook en terminal
+    - name: Mostrar ruta de los reportes
       ansible.builtin.debug:
-        msg: |
-          ======================================================
-          REPORTE DE EJECUCIÓN: ACTUALIZACIÓN DE SERVIDORES
-          ======================================================
-          Objetivo: Instalar actualizaciones y evaluar reinicios.
-          ID de ejecución: {{ act_id_ejecucion }}
-          Logs detallados guardados en: {{ act_dir_logs }}
-          
-          ESTADO FINAL POR SERVIDOR:
-          {% for host in ansible_play_hosts_all | sort %}
-          {% set estado = hostvars[host]['act_estado'] | default('UNREACHABLE (Servidor apagado o sin conexión de red)') %}
-          {% set reinicio = hostvars[host]['act_reinicio'] | default(false) %}
-          {% set aviso_reinicio = ' --> [! REINICIO NECESARIO]' if reinicio else '' %}
-           - {{ host }}: {{ estado }}{{ aviso_reinicio }}
-          {% endfor %}
-          
-          INSTRUCCIONES DEL PLAY RECAP INFERIOR:
-           -> 'unreachable>0': Ansible no pudo alcanzar la máquina por SSH/Hamachi.
-           -> 'failed>0': Ocurrió un error durante la actualización de apt.
-           -> 'changed>0': Se descargaron e instalaron paquetes exitosamente.
-          ======================================================
+        msg: "Logs y resumen en {{ act_dir_logs }}"
       run_once: true
-      delegate_to: localhost
-      become: false
+
+    - name: Señalar resultados distintos de OK después de escribir los logs
+      ansible.builtin.fail:
+        msg: "{{ act_estado }}. {{ act_error | trim }} Consultar {{ act_dir_logs }}/{{ inventory_hostname }}.log"
+      when: act_estado != 'OK'

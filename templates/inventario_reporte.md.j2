@@ -8,17 +8,17 @@ Fecha de generación: {{ inv_fecha }}
 {% set inv_cuenta.alcanzables = inv_cuenta.alcanzables + 1 %}
 {% endif %}
 {% endfor %}
-- Servidores en el inventario: {{ ansible_play_hosts_all | length }}
-- Alcanzables: {{ inv_cuenta.alcanzables }}
-- No alcanzables: {{ (ansible_play_hosts_all | length) - inv_cuenta.alcanzables }}
+- Servidores seleccionados: {{ ansible_play_hosts_all | length }}
+- Con ficha: {{ inv_cuenta.alcanzables }}
+- Sin ficha: {{ (ansible_play_hosts_all | length) - inv_cuenta.alcanzables }}
 
-| Host | Hostname | Ubuntu | IP Hamachi | vCPU | RAM (MB) | Disco total (GB) | Disco libre (GB) | Ubuntu Pro |
-|---|---|---|---|---|---|---|---|---|
+| Host | Hostname | Ubuntu | IP del inventario | IP Hamachi en ham0 | vCPU | RAM (MiB) | Disco total (GiB) | Disco libre (GiB) | Ubuntu Pro |
+|---|---|---|---|---|---|---|---|---|---|
 {% for host in ansible_play_hosts_all | sort %}
 {% if hostvars[host]['inv_ficha'] is defined %}
 {% set ficha = hostvars[host]['inv_ficha'] %}
-| {{ host }} | {{ ficha['hostname'] }} | {{ ficha['ubuntu'] }} | {{ ficha['ip_hamachi'] }} | {{ ficha['cpu_vcpus'] }} | {{ ficha['ram_mb'] }} | {{ ficha['disco_total_gb'] }} | {{ ficha['disco_libre_gb'] }} | {{ ficha['ubuntu_pro'] }} |
+| {{ host }} | {{ ficha['hostname'] }} | {{ ficha['ubuntu'] }} | {{ ficha['ip_inventario'] }} | {{ ficha['ip_hamachi'] }} | {{ ficha['cpu_vcpus'] }} | {{ ficha['ram_mb'] }} | {{ ficha['disco_total_gb'] }} | {{ ficha['disco_libre_gb'] }} | {{ ficha['ubuntu_pro'] }} |
 {% else %}
-| {{ host }} | no alcanzable | - | - | - | - | - | - | - |
+| {{ host }} | sin ficha (ver recap) | - | - | - | - | - | - | - | - |
 {% endif %}
 {% endfor %}

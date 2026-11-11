@@ -14,14 +14,26 @@
 * **Versión de Git:** git version 2.53.0
 * **Fecha de Configuración:** 2026-10-13
 
-## 3. Estructura de Inventarios
-* Laboratorio: `inventories/laboratorio/hosts.yml` (Conectividad sobre red privada Hamachi y soporte LAN)
-* Producción: `inventories/produccion/hosts.yml` (Separado y protegido)
+## 3. Inventario y acceso
 
-## 4. Guía de Reproducción Completa desde Cero (Disaster Recovery)
-El laboratorio está diseñado para reconstruirse en su totalidad a partir de máquinas virtuales limpias siguiendo esta secuencia:
+`control-ansible` administra por SSH a `srv-web-01`, `srv-db-01` y `srv-admin-01`. Cada VM corre en la laptop de su propietario y se conecta mediante Hamachi. Las IP predeterminadas están en [el inventario de laboratorio](inventories/laboratorio/hosts.yml). Para la prueba Hamachi, deja sin definir `IP_WEB`, `IP_DB` e `IP_ADMIN`. `inventories/produccion/` está reservado por separado y sólo contiene un marcador.
 
-1. **Restauración de Nodos:** Restaurar las 4 máquinas virtuales al snapshot base limpio `01-base-ssh`.
-2. **Comprobación de Enlace:** Validar que el transporte SSH y el inventario responden:
-   ```bash
-   ansible all -m ansible.builtin.ping --ask-become-pass
+Desde la raíz del checkout, con Ansible instalado en `control-ansible`:
+
+```bash
+ansible-galaxy collection install -r requirements.yml
+ansible-inventory --graph
+ansible all -m ansible.builtin.ping
+```
+
+SSH usa `automatizacion` y la llave local `~/.ssh/ansible_uaa`. Verifica las huellas SSH con cada propietario. Los playbooks que requieren sudo declaran `become` y se ejecutan con `--ask-become-pass` cuando sudo pide contraseña. La consulta habitual de Pro, el inventario técnico y el ping se ejecutan sin sudo ni contraseña de Vault.
+
+## 4. Integración y demostración
+
+- [A14 y A15 · validación de reportes e integración desde snapshots](docs/integracion.md).
+- [A16 · guion y checklist de demostración](docs/demostracion.md).
+- [Matriz de evidencias por componente](docs/evidencias/MATRIZ_FINAL_EVIDENCIAS.md).
+- [A17 · ficha del baseline y cierre](docs/baseline.md).
+- [Problemas conocidos y recuperación](docs/PROBLEMAS_CONOCIDOS.md).
+
+Los reportes se generan en `logs/` del nodo de control, ignorado por Git. Cada propietario revisa su evidencia y conserva bajo `docs/evidencias/` sólo extractos sanitizados. El Vault de Ubuntu Pro permanece cifrado en `vars/vault/vault.yml`. El flujo habitual de registro de Pro y Landscape es interactivo. Los snapshots se gestionan en el hipervisor y se conservan fuera del repositorio.

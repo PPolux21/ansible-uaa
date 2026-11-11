@@ -24,8 +24,8 @@ ok: [srv-admin-01] =>
     - For a list of all Ubuntu Pro services, run 'pro status --all'
     - 'Enable services with: pro enable <service>'
     - ''
-    - '     Account: al280676@edu.uaa.mx'
-    - 'Subscription: Ubuntu Pro - free personal subscription'
+    - '     Account: [redactado]
+    - 'Subscription: [redactado]
 
 TASK [Adjuntar Ubuntu Pro solo cuando este autorizado] *************************
 skipping: [srv-admin-01]

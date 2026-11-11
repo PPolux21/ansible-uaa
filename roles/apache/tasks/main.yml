@@ -25,9 +25,12 @@
   ansible.builtin.meta: flush_handlers
 
 - name: Validar respuesta HTTP 200 localmente
+  become: false
   ansible.builtin.uri:
     url: http://localhost/
     return_content: true
     status_code: 200
   register: http_check
-  failed_when: ansible_facts['hostname'] not in http_check.content
+  failed_when: >-
+    (http_check.status | default(-1)) != 200 or
+    ansible_facts['hostname'] not in (http_check.content | default(''))
