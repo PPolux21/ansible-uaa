@@ -10,6 +10,8 @@
     resp_dir: /var/backups/mariadb
     # Fecha y hora del servidor al recolectar facts: identifica el respaldo de esta ejecución.
     resp_fecha: "{{ ansible_facts['date_time']['date'] }}_{{ ansible_facts['date_time']['hour'] }}{{ ansible_facts['date_time']['minute'] }}{{ ansible_facts['date_time']['second'] }}"
+    # Reporte en el nodo de control; el id de ejecución es la misma marca de tiempo.
+    resp_dir_logs: "{{ playbook_dir }}/../logs/respaldo/{{ resp_fecha }}"
     resp_registros:
       - { id: 1, texto: "Alta de servidor srv-db-01", fecha: "2026-11-01" }
       - { id: 2, texto: "Instalacion de MariaDB 11.8", fecha: "2026-11-02" }
@@ -316,15 +318,12 @@
           register: resp_ss
           changed_when: false
 
-        - name: Verificar que MariaDB escucha solo en 127.0.0.1
-          ansible.builtin.assert:
-            that:
-              - resp_escucha | length > 0
-              - resp_escucha | reject('equalto', '127.0.0.1:3306') | list | length == 0
-            fail_msg: "MariaDB escucha fuera de localhost: {{ resp_escucha }}"
-            success_msg: "MariaDB escucha solo en: {{ resp_escucha | join(', ') }}"
-          vars:
+        - name: Evaluar direcciones de escucha de MariaDB
+          ansible.builtin.set_fact:
             resp_escucha: "{{ resp_ss.stdout_lines | map('split') | map(attribute=3) | list }}"
+            resp_puerto_ok: >-
+              {{ (resp_ss.stdout_lines | length > 0)
+                 and (resp_ss.stdout_lines | map('split') | map(attribute=3) | reject('equalto', '127.0.0.1:3306') | list | length == 0) }}
 
         - name: Mostrar resultado de la recuperación
           ansible.builtin.debug:
@@ -333,6 +332,33 @@
               - "Antes (metadatos): {{ resp_meta_datos.filas }} filas / CHECKSUM {{ resp_meta_datos.checksum_tabla }}"
               - "Después: {{ resp_filas_despues }} filas / CHECKSUM {{ resp_checksum_despues }}"
               - "Resultado de recuperación: {{ resp_resultado }}"
+
+        - name: Crear directorio del reporte en el nodo de control
+          ansible.builtin.file:
+            path: "{{ resp_dir_logs }}"
+            state: directory
+            mode: "0755"
+          delegate_to: localhost
+          become: false
+
+        - name: Generar reporte de respaldo y recuperación
+          ansible.builtin.template:
+            src: "{{ playbook_dir }}/../templates/respaldo_reporte.log.j2"
+            dest: "{{ resp_dir_logs }}/reporte.log"
+            mode: "0644"
+          delegate_to: localhost
+          become: false
+
+        - name: Mostrar ubicación del reporte
+          ansible.builtin.debug:
+            msg: "Reporte guardado en: logs/respaldo/{{ resp_fecha }}/reporte.log"
+
+        - name: Verificar que MariaDB escucha solo en 127.0.0.1
+          ansible.builtin.assert:
+            that:
+              - resp_puerto_ok | bool
+            fail_msg: "MariaDB escucha fuera de localhost: {{ resp_escucha }}"
+            success_msg: "MariaDB escucha solo en: {{ resp_escucha | join(', ') }}"
 
         - name: Confirmar resultado OK de la recuperación
           ansible.builtin.assert:

@@ -1,0 +1,24 @@
+Reporte de respaldo y recuperación de MariaDB
+Servidor: {{ inventory_hostname }}
+Id de ejecución: {{ resp_fecha }}
+Fecha de ejecución: {{ ansible_facts['date_time']['date'] }} {{ ansible_facts['date_time']['time'] }} {{ ansible_facts['date_time']['tz'] }}
+
+Respaldo
+  Archivo: {{ resp_ultimo }}
+  Fecha del respaldo: {{ resp_meta_datos.fecha }}
+  Herramienta: {{ resp_meta_datos.herramienta }}
+  Tamaño: {{ resp_meta_datos.tamano_bytes }} bytes
+  SHA-256: {{ resp_meta_datos.sha256 }}
+  Integridad (SHA-256 actual = metadatos): {{ 'sí' if resp_ultimo_stat.stat.checksum == resp_meta_datos.sha256 else 'no' }}
+  Directorio de datos activo: {{ resp_meta_datos.datadir }}
+
+Datos de prueba ({{ resp_db }}.{{ resp_tabla }})
+{{ '  %-10s %-8s %s' | format('', 'Filas', 'CHECKSUM TABLE') }}
+{{ '  %-10s %-8s %s' | format('Antes', resp_meta_datos.filas, resp_meta_datos.checksum_tabla) }}
+{{ '  %-10s %-8s %s' | format('Después', resp_filas_despues, resp_checksum_despues) }}
+
+Puerto 3306
+  Escucha en: {{ resp_escucha | join(', ') if resp_escucha else 'sin escucha' }}
+  Solo localhost: {{ 'sí' if resp_puerto_ok | bool else 'no' }}
+
+Resultado de recuperación: {{ resp_resultado }}
