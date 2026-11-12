@@ -1,0 +1,24 @@
+Reporte de respaldo y recuperación de MariaDB
+Servidor: srv-db-01
+Id de ejecución: 2026-11-12_171646
+Fecha de ejecución: 2026-11-12 17:16:46 CST
+
+Respaldo
+  Archivo: /var/backups/mariadb/prueba_respaldo_2026-11-12_171646.sql.gz
+  Fecha del respaldo: 2026-11-12_171646
+  Herramienta: mariadb-dump (community.mysql.mysql_db, single-transaction, gzip)
+  Tamaño: 1008 bytes
+  SHA-256: e1bf1ae04fb839787bf171ae8f86adc0d2167d7f401f0c3ec5c98efd51552ab7
+  Integridad (SHA-256 actual = metadatos): sí
+  Directorio de datos activo: /var/lib/mariadb/
+
+Datos de prueba (prueba_respaldo.registros)
+             Filas    CHECKSUM TABLE
+  Antes      8        2321021612
+  Después    8        2321021612
+
+Puerto 3306
+  Escucha en: 127.0.0.1:3306
+  Solo localhost: sí
+
+Resultado de recuperación: OK

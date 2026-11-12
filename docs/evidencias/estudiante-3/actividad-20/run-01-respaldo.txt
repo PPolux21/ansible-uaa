@@ -1,0 +1,160 @@
+
+PLAY [Respaldo y recuperación de MariaDB] **************************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [srv-db-01]
+
+TASK [Crear base de datos de prueba] *******************************************
+ok: [srv-db-01]
+
+TASK [Consultar si la tabla de prueba existe] **********************************
+ok: [srv-db-01]
+
+TASK [Crear tabla de prueba] ***************************************************
+skipping: [srv-db-01]
+
+TASK [Consultar ids existentes en la tabla de prueba] **************************
+ok: [srv-db-01]
+
+TASK [Insertar registros de prueba faltantes] **********************************
+skipping: [srv-db-01]
+
+TASK [Contar filas y calcular checksum de la tabla (antes)] ********************
+ok: [srv-db-01]
+
+TASK [Mostrar consulta antes del respaldo] *************************************
+ok: [srv-db-01] => 
+    msg:
+    - 'Base: prueba_respaldo / Tabla: registros'
+    - 'Filas: 8'
+    - 'CHECKSUM TABLE: 2321021612'
+
+TASK [Consultar directorio de datos activo de MariaDB] *************************
+ok: [srv-db-01]
+
+TASK [Verificar que el respaldo queda fuera del directorio de datos activo] ****
+ok: [srv-db-01] => 
+    changed: false
+    msg: /var/backups/mariadb está fuera del datadir /var/lib/mariadb/
+
+TASK [Crear directorio de respaldos con permisos restringidos] *****************
+ok: [srv-db-01]
+
+TASK [Definir rutas del respaldo y sus metadatos] ******************************
+ok: [srv-db-01]
+
+TASK [Contar filas y calcular checksum al momento del respaldo] ****************
+ok: [srv-db-01]
+
+TASK [Generar respaldo lógico comprimido con mariadb-dump] *********************
+changed: [srv-db-01]
+
+TASK [Restringir permisos del archivo de respaldo] *****************************
+changed: [srv-db-01]
+
+TASK [Obtener tamaño y SHA-256 del respaldo] ***********************************
+ok: [srv-db-01]
+
+TASK [Guardar archivo de metadatos junto al respaldo] **************************
+changed: [srv-db-01]
+
+TASK [Mostrar resumen del respaldo] ********************************************
+ok: [srv-db-01] => 
+    msg:
+    - 'Respaldo: /var/backups/mariadb/prueba_respaldo_2026-11-12_171646.sql.gz'
+    - 'Metadatos: /var/backups/mariadb/prueba_respaldo_2026-11-12_171646.meta.json'
+    - 'Tamaño: 1008 bytes'
+    - 'SHA-256: e1bf1ae04fb839787bf171ae8f86adc0d2167d7f401f0c3ec5c98efd51552ab7'
+    - 'Filas: 8 / CHECKSUM TABLE: 2321021612'
+
+TASK [Verificar que la pérdida solo afecta a la base de prueba] ****************
+ok: [srv-db-01] => 
+    changed: false
+    msg: 'Base autorizada para la pérdida controlada: prueba_respaldo'
+
+TASK [Buscar respaldos existentes antes de borrar] *****************************
+ok: [srv-db-01]
+
+TASK [Verificar que existe al menos un respaldo antes de borrar] ***************
+ok: [srv-db-01] => 
+    changed: false
+    msg: 'Respaldos disponibles: 5'
+
+TASK [Borrar la tabla de prueba (pérdida controlada)] **************************
+changed: [srv-db-01]
+
+TASK [Confirmar que la tabla de prueba ya no existe] ***************************
+ok: [srv-db-01]
+
+TASK [Buscar respaldos de la base de prueba] ***********************************
+ok: [srv-db-01]
+
+TASK [Seleccionar el respaldo más reciente] ************************************
+ok: [srv-db-01]
+
+TASK [Leer metadatos del respaldo seleccionado] ********************************
+ok: [srv-db-01]
+
+TASK [Cargar metadatos del respaldo] *******************************************
+ok: [srv-db-01]
+
+TASK [Obtener SHA-256 actual del respaldo seleccionado] ************************
+ok: [srv-db-01]
+
+TASK [Verificar integridad del respaldo contra sus metadatos] ******************
+ok: [srv-db-01] => 
+    changed: false
+    msg: 'Respaldo íntegro: /var/backups/mariadb/prueba_respaldo_2026-11-12_171646.sql.gz
+        (SHA-256 e1bf1ae04fb839787bf171ae8f86adc0d2167d7f401f0c3ec5c98efd51552ab7)'
+
+TASK [Verificar que la restauración solo afecta a la base de prueba] ***********
+ok: [srv-db-01] => 
+    changed: false
+    msg: 'Base autorizada para la restauración: prueba_respaldo'
+
+TASK [Restaurar el respaldo en la base de prueba] ******************************
+changed: [srv-db-01]
+
+TASK [Contar filas y calcular checksum de la tabla (después)] ******************
+ok: [srv-db-01]
+
+TASK [Comparar datos restaurados contra los metadatos del respaldo] ************
+ok: [srv-db-01]
+
+TASK [Consultar sockets TCP en escucha en el puerto 3306] **********************
+ok: [srv-db-01]
+
+TASK [Evaluar direcciones de escucha de MariaDB] *******************************
+ok: [srv-db-01]
+
+TASK [Mostrar resultado de la recuperación] ************************************
+ok: [srv-db-01] => 
+    msg:
+    - 'Respaldo restaurado: /var/backups/mariadb/prueba_respaldo_2026-11-12_171646.sql.gz'
+    - 'Antes (metadatos): 8 filas / CHECKSUM 2321021612'
+    - 'Después: 8 filas / CHECKSUM 2321021612'
+    - 'Resultado de recuperación: OK'
+
+TASK [Crear directorio del reporte en el nodo de control] **********************
+changed: [srv-db-01 -> localhost]
+
+TASK [Generar reporte de respaldo y recuperación] ******************************
+changed: [srv-db-01 -> localhost]
+
+TASK [Mostrar ubicación del reporte] *******************************************
+ok: [srv-db-01] => 
+    msg: 'Reporte guardado en: logs/respaldo/2026-11-12_171646/reporte.log'
+
+TASK [Verificar que MariaDB escucha solo en 127.0.0.1] *************************
+ok: [srv-db-01] => 
+    changed: false
+    msg: 'MariaDB escucha solo en: 127.0.0.1:3306'
+
+TASK [Confirmar resultado OK de la recuperación] *******************************
+ok: [srv-db-01] => 
+    changed: false
+    msg: Recuperación OK
+
+PLAY RECAP *********************************************************************
+srv-db-01                  : ok=39   changed=7    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0   
+

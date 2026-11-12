@@ -1,0 +1,16 @@
+drwx------ 2 root root 4096 Nov 12 17:17 /var/backups/mariadb
+total 40
+-rw------- 1 root root  485 2026-11-10 14:28 prueba_respaldo_2026-11-10_142825.meta.json
+-rw------- 1 root root 1008 2026-11-10 14:28 prueba_respaldo_2026-11-10_142825.sql.gz
+-rw------- 1 root root  485 2026-11-10 14:42 prueba_respaldo_2026-11-10_144214.meta.json
+-rw------- 1 root root 1008 2026-11-10 14:42 prueba_respaldo_2026-11-10_144214.sql.gz
+-rw------- 1 root root  485 2026-11-12 17:10 prueba_respaldo_2026-11-12_170951.meta.json
+-rw------- 1 root root 1008 2026-11-12 17:10 prueba_respaldo_2026-11-12_170951.sql.gz
+-rw------- 1 root root  485 2026-11-12 17:15 prueba_respaldo_2026-11-12_171519.meta.json
+-rw------- 1 root root 1008 2026-11-12 17:15 prueba_respaldo_2026-11-12_171519.sql.gz
+-rw------- 1 root root  485 2026-11-12 17:17 prueba_respaldo_2026-11-12_171646.meta.json
+-rw------- 1 root root 1008 2026-11-12 17:16 prueba_respaldo_2026-11-12_171646.sql.gz
+
+Respaldo revisado: /var/backups/mariadb/prueba_respaldo_2026-11-12_171646.sql.gz
+e1bf1ae04fb839787bf171ae8f86adc0d2167d7f401f0c3ec5c98efd51552ab7  /var/backups/mariadb/prueba_respaldo_2026-11-12_171646.sql.gz
+Coincidencias password/identified/passwd: 0
